@@ -9,6 +9,10 @@ function RunePixelsPlayerInfo() {
   const [error, setError] = useState(null);
 
   const fetchPlayer = async () => {
+    if (!player.trim()) {
+      setError("Digite o nome do jogador.");
+      return;
+    }
     setLoading(true);
     setError(null);
     setData(null);
@@ -32,18 +36,32 @@ function RunePixelsPlayerInfo() {
         onChange={e => setPlayer(e.target.value)}
         placeholder="Nome do jogador"
         style={{ width: "70%", padding: 8 }}
+        onKeyDown={e => e.key === "Enter" && fetchPlayer()}
+        disabled={loading}
       />
-      <button onClick={fetchPlayer} style={{ padding: 8, marginLeft: 8 }}>
-        Buscar
+      <button onClick={fetchPlayer} style={{ padding: 8, marginLeft: 8 }} disabled={loading}>
+        {loading ? "Buscando..." : "Buscar"}
       </button>
-      {loading && <p>Carregando...</p>}
       {error && <p style={{ color: "red" }}>{error}</p>}
       {data && (
         <div style={{ marginTop: 16 }}>
           <h3>{data.username || data.name}</h3>
-          <p>Nível total: {data.totals?.level}</p>
-          <p>Experiência total: {data.totals?.xp}</p>
-          {/* Adicione mais campos conforme necessário */}
+          <p>Nível total: {data.totals?.level ?? "N/A"}</p>
+          <p>Experiência total: {data.totals?.xp?.toLocaleString("pt-BR") ?? "N/A"}</p>
+          <p>Combat Level: {data.combatlevel ?? "N/A"}</p>
+          <p>Última atualização: {data.lastupdated ? new Date(data.lastupdated).toLocaleString("pt-BR") : "N/A"}</p>
+          <hr style={{ margin: "12px 0" }} />
+          <strong>Skills principais:</strong>
+          <ul>
+            {data.skills &&
+              Object.entries(data.skills)
+                .slice(0, 5)
+                .map(([skill, info]) => (
+                  <li key={skill}>
+                    {skill}: Nível {info.level} | XP {info.xp?.toLocaleString("pt-BR")}
+                  </li>
+                ))}
+          </ul>
         </div>
       )}
     </div>
