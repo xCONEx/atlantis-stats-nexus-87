@@ -23,18 +23,19 @@ const clans = [
 
 interface FirstLoginModalProps {
   userId: string | null;
-  onSave: (role: string, clan: string) => void;
+  onSave: (role: string, clan: string, username: string) => void;
 }
 
 const FirstLoginModal = ({ userId, onSave }: FirstLoginModalProps) => {
   const [role, setRole] = useState("");
   const [clan, setClan] = useState("");
+  const [username, setUsername] = useState("");
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
-    if (!role || !clan) return;
+    if (!role || !clan || !username) return;
     setSaving(true);
-    await onSave(role, clan);
+    await onSave(role, clan, username);
     setSaving(false);
   };
 
@@ -79,10 +80,22 @@ const FirstLoginModal = ({ userId, onSave }: FirstLoginModalProps) => {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="username">Nick do RuneScape</Label>
+              <input
+                id="username"
+                className="w-full border rounded px-3 py-2"
+                placeholder="Digite seu nick do RuneScape"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                autoComplete="off"
+                maxLength={255}
+              />
+            </div>
             <Button
               className="w-full mt-4"
               onClick={handleSave}
-              disabled={!role || !clan || saving}
+              disabled={!role || !clan || !username || saving}
             >
               Salvar e continuar
             </Button>
