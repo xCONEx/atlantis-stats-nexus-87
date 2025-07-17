@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Link, useLocation } from "react-router-dom";
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
-  const { signOut, userRole } = useAuth();
+  const { signOut, userRole, rsUsername } = useAuth();
   const location = useLocation();
   return (
     <div className="min-h-screen bg-gradient-background">
@@ -31,6 +31,11 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                 <Settings className="h-4 w-4" />
                 Configurações
               </Button>
+              {rsUsername && (
+                <span className="text-runescape-gold font-semibold text-lg" title="Nick do RuneScape">
+                  {rsUsername}
+                </span>
+              )}
               <Button variant="runescape" size="sm">
                 <Zap className="h-4 w-4" />
                 {userRole || 'Membro'}
