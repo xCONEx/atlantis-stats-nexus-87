@@ -25,8 +25,8 @@ const Players = () => {
   // Função para decodificar nomes e remover caracteres problemáticos
   const cleanName = (name: string) => {
     if (!name) return "";
-    // Decodifica entidades HTML e remove caracteres não-ASCII visíveis
-    return he.decode(name.replace(//g, "").replace(/[^\w\s\-\[\]!@#$%^&*()_+=,.?']/g, "")).trim();
+    // Decodifica entidades HTML e remove caracteres indesejados
+    return he.decode(name.replace(/[^\w\s\-\[\]!@#$%^&*()_+=,.?']/g, "")).trim();
   };
 
   const fetchPlayers = async (clan: string, pageNum = 1, searchTerm = "", rank = "") => {
