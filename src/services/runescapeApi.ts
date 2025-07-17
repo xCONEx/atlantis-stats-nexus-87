@@ -77,15 +77,11 @@ class RuneScapeApiService {
   
   async getClanMembers(clanName: string, pageSize: number = 15): Promise<ClanMember[]> {
     try {
-      const encodedClanName = encodeURIComponent(clanName.trim());
-      const response = await fetch(
-        `${this.baseUrl}/m=clan-hiscores/l=3/members.ws?clanName=${encodedClanName}&pageSize=${pageSize}`
-      );
-      
+      // Usar a rota proxy para contornar CORS
+      const response = await fetch(`/api/proxy-clan?clanName=${encodeURIComponent(clanName)}`);
       if (!response.ok) {
         throw new Error(`Clan "${clanName}" not found or API error`);
       }
-      
       const data = await response.text();
       return this.parseClanMembersData(data);
     } catch (error) {
