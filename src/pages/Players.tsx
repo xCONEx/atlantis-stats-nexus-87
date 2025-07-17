@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { runescapeApi, type PlayerHiscores, type ClanMember } from "@/services/runescapeApi";
 import { supabase } from "@/integrations/supabase/client";
 import he from "he";
+import PlayerDetailsModal from "@/components/PlayerDetailsModal";
 
 const PAGE_SIZE = 20;
 
@@ -21,6 +22,8 @@ const Players = () => {
   const [rankFilter, setRankFilter] = useState("");
   const [allRanks, setAllRanks] = useState<string[]>([]);
   const { toast } = useToast();
+  const [selectedPlayer, setSelectedPlayer] = useState<any | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
   // Função para decodificar nomes e remover caracteres problemáticos
   const cleanName = (name: string) => {
@@ -135,7 +138,14 @@ const Players = () => {
                 <tr><td colSpan={3} className="text-center py-4 text-foreground">Nenhum jogador encontrado</td></tr>
               ) : (
                 players.map((p, i) => (
-                  <tr key={p.username} className={i % 2 === 0 ? "bg-[#23283a] text-runescape-gold" : "bg-[#181c24] text-white"}>
+                  <tr
+                    key={p.username}
+                    className={i % 2 === 0 ? "bg-[#23283a] text-runescape-gold cursor-pointer hover:bg-[#2e3450]" : "bg-[#181c24] text-white cursor-pointer hover:bg-[#23283a]"}
+                    onClick={() => {
+                      setSelectedPlayer(p);
+                      setModalOpen(true);
+                    }}
+                  >
                     <td className="px-3 py-2 font-bold break-all">{cleanName(p.username)}</td>
                     <td className="px-3 py-2">{p.clan_rank}</td>
                     <td className="px-3 py-2">{p.total_experience?.toLocaleString("pt-BR")}</td>
@@ -168,6 +178,21 @@ const Players = () => {
           </div>
         )}
       </div>
+      <PlayerDetailsModal
+        player={selectedPlayer ? {
+          name: selectedPlayer.username,
+          clan: clanFilter,
+          combat: selectedPlayer.combat_level || 0,
+          totalLevel: selectedPlayer.total_level || 0,
+          totalXp: selectedPlayer.total_experience || 0,
+          lastSeen: selectedPlayer.last_seen || '',
+          isOnline: selectedPlayer.is_online || false,
+          rank: selectedPlayer.clan_rank || '',
+          joined: selectedPlayer.joined_at || ''
+        } : null}
+        open={modalOpen && !!selectedPlayer}
+        onClose={() => setModalOpen(false)}
+      />
     </Layout>
   );
 };
