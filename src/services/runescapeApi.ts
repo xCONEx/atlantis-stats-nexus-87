@@ -55,6 +55,11 @@ const SKILL_NAMES = [
   'necromancy'
 ];
 
+// Função utilitária para normalizar todos os tipos de espaço para espaço comum
+function normalizeSpaces(str: string): string {
+  return str.replace(/[\u00A0\u2000-\u200B\u202F\u205F\u3000]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
 class RuneScapeApiService {
   private readonly baseUrl = 'https://secure.runescape.com';
   // Remover runePixelsBase e métodos relacionados
@@ -131,7 +136,7 @@ class RuneScapeApiService {
       const parts = line.split(',');
       if (parts.length >= 4) {
         members.push({
-          name: parts[0]?.trim().replace(/\+/g, ' ').normalize('NFC') || '',
+          name: normalizeSpaces(parts[0]?.trim().replace(/\+/g, ' ').normalize('NFC')) || '',
           rank: parts[1]?.trim() || 'Member',
           experience: parseInt(parts[2]) || 0,
           kills: parseInt(parts[3]) || 0
