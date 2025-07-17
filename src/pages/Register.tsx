@@ -35,6 +35,7 @@ const Register = () => {
     { value: "leader", label: "Líder", icon: Zap },
     { value: "vice-leader", label: "Vice-líder", icon: Shield },
     { value: "coordinator", label: "Coordenador", icon: User },
+    { value: "fiscal", label: "Fiscal", icon: User },
     { value: "organizer", label: "Organizador", icon: User },
     { value: "administrator", label: "Administrador", icon: User }
   ];
