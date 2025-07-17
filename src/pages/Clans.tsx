@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Users, Download, RefreshCw, Crown, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,23 @@ import { supabase } from "@/integrations/supabase/client";
 
 const Clans = () => {
   const [loading, setLoading] = useState(false);
+  const [atlantisCount, setAtlantisCount] = useState<number | null>(null);
+  const [argusCount, setArgusCount] = useState<number | null>(null);
   const { toast } = useToast();
+
+  // Função para buscar a contagem de membros de cada clã
+  const fetchClanCounts = async () => {
+    const [{ count: atlantis }, { count: argus }] = await Promise.all([
+      supabase.from("players").select("id", { count: "exact", head: true }).eq("clan_name", "Atlantis"),
+      supabase.from("players").select("id", { count: "exact", head: true }).eq("clan_name", "Atlantis Argus"),
+    ]);
+    setAtlantisCount(atlantis ?? 0);
+    setArgusCount(argus ?? 0);
+  };
+
+  useEffect(() => {
+    fetchClanCounts();
+  }, []);
 
   const importClanMembers = async (clanName: string) => {
     setLoading(true);
@@ -30,6 +46,7 @@ const Clans = () => {
         if (error) errorCount++;
         else successCount++;
       }
+      await fetchClanCounts(); // Atualiza a contagem após importação
       toast({
         title: "Importação concluída",
         description: `${successCount} membros importados/atualizados com sucesso para o clã ${clanName}. ${errorCount > 0 ? errorCount + ' erros.' : ''}`,
@@ -63,7 +80,9 @@ const Clans = () => {
               <CardDescription>Clã principal da organização</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="text-2xl font-bold text-runescape-gold">124 membros</div>
+              <div className="text-2xl font-bold text-runescape-gold">
+                {atlantisCount !== null ? `${atlantisCount} membros` : "..."}
+              </div>
               <Button
                 onClick={() => importClanMembers("Atlantis")}
                 disabled={loading}
@@ -84,7 +103,9 @@ const Clans = () => {
               <CardDescription>Clã secundário da organização</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="text-2xl font-bold text-purple-400">89 membros</div>
+              <div className="text-2xl font-bold text-purple-400">
+                {argusCount !== null ? `${argusCount} membros` : "..."}
+              </div>
               <Button
                 onClick={() => importClanMembers("Atlantis Argus")}
                 disabled={loading}
