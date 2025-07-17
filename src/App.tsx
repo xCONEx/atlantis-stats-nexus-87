@@ -13,6 +13,7 @@ import Players from "./pages/Players";
 import Donations from "./pages/Donations";
 import Clans from "./pages/Clans";
 import NotFound from "./pages/NotFound";
+import AdminPage from './pages/Admin';
 
 const queryClient = new QueryClient();
 
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/players" element={<ProtectedRoute><Players /></ProtectedRoute>} />
             <Route path="/donations" element={<ProtectedRoute><Donations /></ProtectedRoute>} />
             <Route path="/clans" element={<ProtectedRoute><Clans /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
