@@ -1,9 +1,9 @@
 export default async function handler(req, res) {
-  const { clanName } = req.query;
-  if (!clanName) {
-    return res.status(400).json({ error: "clanName obrigatório" });
+  const { playerName } = req.query;
+  if (!playerName) {
+    return res.status(400).json({ error: "playerName obrigatório" });
   }
-  const url = `https://secure.runescape.com/m=clan-hiscores/l=3/members.ws?clanName=${encodeURIComponent(clanName)}&pageSize=500`;
+  const url = `https://secure.runescape.com/m=hiscore/index_lite.ws?player=${encodeURIComponent(playerName)}`;
   try {
     const response = await fetch(url);
     const text = await response.text(); // RuneScape retorna texto, não JSON
