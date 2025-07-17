@@ -61,6 +61,11 @@ function normalizeSpaces(str: string): string {
   return str.replace(/[\s\u00A0\u1680\u180E\u2000-\u200A\u2028\u2029\u202F\u205F\u3000]+/g, ' ').trim();
 }
 
+function sanitizeString(input: string): string {
+  const normalized = normalizeSpaces(input.replace(/\+/g, ' ').normalize('NFC'));
+  return normalized.replace(/[]/g, ''); // Remove replacement character
+}
+
 class RuneScapeApiService {
   private readonly baseUrl = 'https://secure.runescape.com';
   // Remover runePixelsBase e métodos relacionados
@@ -137,7 +142,7 @@ class RuneScapeApiService {
       const parts = line.split(',');
       if (parts.length >= 4) {
         members.push({
-          name: normalizeSpaces(parts[0]?.trim().replace(/\+/g, ' ').normalize('NFC')) || '',
+          name: sanitizeString(parts[0]?.trim()) || '',
           rank: parts[1]?.trim() || 'Member',
           experience: parseInt(parts[2]) || 0,
           kills: parseInt(parts[3]) || 0
