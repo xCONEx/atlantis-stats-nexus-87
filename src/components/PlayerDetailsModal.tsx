@@ -262,12 +262,12 @@ const PlayerDetailsModal = ({ player, open, onClose }: PlayerDetailsModalProps) 
                                 <img src={SKILL_IMAGES[skill]} alt={skill} className="w-7 h-7 mr-2" />
                                 <span className="font-medium text-runescape-gold">{skill}</span>
                               </div>
-                              <div className="text-2xl font-bold mb-1">{data.level}</div>
+                              <div className="text-2xl font-bold mb-1">{data ? data.level : '-'}</div>
                               <div className="text-sm text-muted-foreground mb-1">
-                                {formatXp(data.xp)} XP
+                                {data ? formatXp(data.xp) : '0'} XP
                               </div>
                               <div className="text-xs text-muted-foreground">
-                                Rank: {formatNumber(data.rank)}
+                                Rank: {data ? formatNumber(data.rank) : '0'}
                               </div>
                             </div>
                           );
@@ -294,12 +294,12 @@ const PlayerDetailsModal = ({ player, open, onClose }: PlayerDetailsModalProps) 
                                 <img src={SKILL_IMAGES[skill]} alt={skill} className="w-7 h-7 mr-2" />
                                 <span className="font-medium text-runescape-gold">{skill}</span>
                               </div>
-                              <div className="text-2xl font-bold mb-1">{data.level}</div>
+                              <div className="text-2xl font-bold mb-1">{data ? data.level : '-'}</div>
                               <div className="text-sm text-muted-foreground mb-1">
-                                {formatXp(data.xp)} XP
+                                {data ? formatXp(data.xp) : '0'} XP
                               </div>
                               <div className="text-xs text-muted-foreground">
-                                Rank: {formatNumber(data.rank)}
+                                Rank: {data ? formatNumber(data.rank) : '0'}
                               </div>
                             </div>
                           );
