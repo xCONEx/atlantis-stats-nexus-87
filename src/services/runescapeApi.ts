@@ -61,12 +61,11 @@ class RuneScapeApiService {
   async getPlayerHiscores(playerName: string): Promise<PlayerHiscores> {
     try {
       const encodedName = encodeURIComponent(playerName.trim());
-      const response = await fetch(`${this.baseUrl}/m=hiscore/index_lite.ws?player=${encodedName}`);
-      
+      // Usar a rota proxy para contornar CORS
+      const response = await fetch(`/api/proxy-player?playerName=${encodedName}`);
       if (!response.ok) {
         throw new Error(`Player "${playerName}" not found or API error`);
       }
-      
       const data = await response.text();
       return this.parseHiscoresData(data);
     } catch (error) {
