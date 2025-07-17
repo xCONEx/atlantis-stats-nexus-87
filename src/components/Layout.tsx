@@ -2,10 +2,13 @@ import { Zap, Shield, Users, TrendingUp, Settings, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link, useLocation } from "react-router-dom";
+import { useState } from 'react';
+import LinkDiscordModal from '@/components/LinkDiscordModal';
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
-  const { signOut, userRole, rsUsername } = useAuth();
+  const { signOut, userRole, rsUsername, user } = useAuth();
   const location = useLocation();
+  const [showLinkModal, setShowLinkModal] = useState(false);
   return (
     <div className="min-h-screen bg-gradient-background">
       {/* Header */}
@@ -31,6 +34,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                 <Settings className="h-4 w-4" />
                 Configurações
               </Button>
+              <Button variant="outline" size="sm" onClick={() => setShowLinkModal(true)}>
+                Vincular Perfil RuneScape
+              </Button>
               {rsUsername && (
                 <span className="text-runescape-gold font-semibold text-lg" title="Nick do RuneScape">
                   {rsUsername}
@@ -48,6 +54,13 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           </div>
         </div>
       </header>
+      {showLinkModal && user && (
+        <LinkDiscordModal
+          open={showLinkModal}
+          onClose={() => setShowLinkModal(false)}
+          discordId={user.id}
+        />
+      )}
 
       {/* Navigation */}
       <nav className="border-b border-border bg-card/30 backdrop-blur-sm">
