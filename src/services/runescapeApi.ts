@@ -57,6 +57,7 @@ const SKILL_NAMES = [
 
 class RuneScapeApiService {
   private readonly baseUrl = 'https://secure.runescape.com';
+  private readonly runePixelsBase = 'https://api.runepixels.com';
   
   async getPlayerHiscores(playerName: string): Promise<PlayerHiscores> {
     try {
@@ -95,6 +96,27 @@ class RuneScapeApiService {
   
   async getAtlantisArgusClanMembers(): Promise<ClanMember[]> {
     return this.getClanMembers('Atlantis Argus', 500);
+  }
+
+  // RunePixels: Jogadores online (RS3)
+  async getOnlinePlayers(): Promise<any[]> {
+    const response = await fetch(`${this.runePixelsBase}/players/online`);
+    if (!response.ok) throw new Error('Erro ao buscar jogadores online');
+    return response.json();
+  }
+
+  // RunePixels: Info de um jogador (RS3)
+  async getPlayerInfo(playerName: string): Promise<any> {
+    const response = await fetch(`${this.runePixelsBase}/players/${encodeURIComponent(playerName)}`);
+    if (!response.ok) throw new Error('Jogador não encontrado');
+    return response.json();
+  }
+
+  // RunePixels: Ranking de clãs (RS3)
+  async getClansRanking(): Promise<any[]> {
+    const response = await fetch(`${this.runePixelsBase}/clans/ranking`);
+    if (!response.ok) throw new Error('Erro ao buscar ranking de clãs');
+    return response.json();
   }
   
   private parseHiscoresData(data: string): PlayerHiscores {
