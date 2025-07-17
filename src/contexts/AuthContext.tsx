@@ -105,13 +105,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             associateDiscordToPlayer(session.user.id);
             fetchRsUsername(session.user.id);
           }, 0);
-          // Checar se já existe associação
-          const { data: link } = await supabase
-            .from('discord_links')
-            .select('username')
-            .eq('discord_id', session.user.id)
-            .single();
-          setShowLinkModal(!link);
+          // Desativar temporariamente o modal de linkar conta para testes
+          setShowLinkModal(false);
+          // // Checar se já existe associação
+          // const { data: link } = await supabase
+          //   .from('discord_links')
+          //   .select('username')
+          //   .eq('discord_id', session.user.id)
+          //   .single();
+          // setShowLinkModal(!link);
         } else {
           setUserRole(null);
           setRsUsername(null);
