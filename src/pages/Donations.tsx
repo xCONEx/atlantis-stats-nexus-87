@@ -95,26 +95,43 @@ const Donations = () => {
                 <p className="text-muted-foreground">Nenhum jogador encontrado.</p>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {playerDonations.map((player) => (
-                    <Card
-                      key={player.player_id || player.player_name}
-                      className="shadow-md hover:shadow-lg transition cursor-pointer"
-                      onClick={() => {
-                        if (player.player_id) setSelectedPlayer({ player_id: player.player_id, player_name: player.player_name });
-                      }}
-                    >
-                      <CardHeader>
-                        <CardTitle className="truncate">{player.player_name}</CardTitle>
-                        <CardDescription>Total doado</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex items-center gap-2">
-                          <span className="text-runescape-gold font-bold text-lg">{player.total_amount.toLocaleString('pt-BR')} GP</span>
-                        </div>
-                        <Button variant="outline" size="sm" className="mt-2 w-full">Ver detalhes</Button>
-                      </CardContent>
-                    </Card>
-                  ))}
+                  {playerDonations
+                    .filter(player => !!player.player_id)
+                    .map((player) => (
+                      <Card
+                        key={player.player_id}
+                        className="shadow-md hover:shadow-lg transition cursor-pointer"
+                        onClick={() => setSelectedPlayer({ player_id: player.player_id, player_name: player.player_name })}
+                      >
+                        <CardHeader>
+                          <CardTitle className="truncate">{player.player_name}</CardTitle>
+                          <CardDescription>Total doado</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="flex items-center gap-2">
+                            <span className="text-runescape-gold font-bold text-lg">{player.total_amount.toLocaleString('pt-BR')} GP</span>
+                          </div>
+                          <Button variant="outline" size="sm" className="mt-2 w-full">Ver detalhes</Button>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  {/* Jogadores sem player_id */}
+                  {playerDonations
+                    .filter(player => !player.player_id)
+                    .map((player) => (
+                      <Card key={player.player_name} className="shadow-md opacity-60">
+                        <CardHeader>
+                          <CardTitle className="truncate">{player.player_name}</CardTitle>
+                          <CardDescription>Total doado</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="flex items-center gap-2">
+                            <span className="text-runescape-gold font-bold text-lg">{player.total_amount.toLocaleString('pt-BR')} GP</span>
+                          </div>
+                          <div className="mt-2 text-xs text-muted-foreground">Jogador não cadastrado no sistema</div>
+                        </CardContent>
+                      </Card>
+                    ))}
                 </div>
               )}
             </CardContent>
