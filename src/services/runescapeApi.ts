@@ -131,7 +131,7 @@ class RuneScapeApiService {
       const parts = line.split(',');
       if (parts.length >= 4) {
         members.push({
-          name: parts[0]?.trim().normalize('NFC') || '',
+          name: parts[0]?.trim().replace(/\+/g, ' ').normalize('NFC') || '',
           rank: parts[1]?.trim() || 'Member',
           experience: parseInt(parts[2]) || 0,
           kills: parseInt(parts[3]) || 0
