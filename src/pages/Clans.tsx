@@ -52,8 +52,7 @@ const Clans = () => {
               <Button
                 onClick={() => importClanMembers("Atlantis")}
                 disabled={loading}
-                variant="runescape"
-                className="w-full"
+                className="btn-runescape w-full"
               >
                 <Users className="h-4 w-4" />
                 Importar Membros
@@ -72,10 +71,9 @@ const Clans = () => {
             <CardContent className="space-y-4">
               <div className="text-2xl font-bold text-purple-400">89 membros</div>
               <Button
-                onClick={() => importClanMembers("Atlantis+Argus")}
+                onClick={() => importClanMembers("Atlantis Argus")}
                 disabled={loading}
-                variant="clan"
-                className="w-full"
+                className="btn-clan w-full"
               >
                 <Users className="h-4 w-4" />
                 Importar Membros
