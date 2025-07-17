@@ -9,7 +9,8 @@ export default async function handler(req, res) {
     if (!response.ok) {
       return res.status(response.status).json({ error: "Erro ao buscar dados do RuneScape" });
     }
-    const text = await response.text(); // RuneScape retorna texto, não JSON
+    const buffer = await response.arrayBuffer();
+    const text = new TextDecoder('utf-8').decode(buffer);
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.status(200).send(text);
   } catch (err) {
