@@ -11,6 +11,7 @@ export default async function handler(req, res) {
     }
     const buffer = await response.arrayBuffer();
     const text = new TextDecoder('utf-8').decode(buffer);
+    console.log('PROXY RAW TEXT:', text.slice(0, 1000)); // Loga as primeiras 1000 chars do texto bruto
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.status(200).send(text);
   } catch (err) {
