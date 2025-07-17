@@ -16,29 +16,98 @@ interface PlayerStats {
   };
 }
 
+// Cache simples em memória para membros dos clãs
+const clanCache: {
+  atlantis: { members: any[]; timestamp: number } | null;
+  atlantisArgus: { members: any[]; timestamp: number } | null;
+} = {
+  atlantis: null,
+  atlantisArgus: null,
+};
+
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
+
 const PlayerSearch = () => {
   const [playerName, setPlayerName] = useState("");
   const [loading, setLoading] = useState(false);
   const [playerData, setPlayerData] = useState<PlayerStats | null>(null);
   const [error, setError] = useState("");
+  const [playerClan, setPlayerClan] = useState<string>("");
+  const [playerRanks, setPlayerRanks] = useState<string[]>([]);
 
-  // Remover mockPlayerData e usar API real
   const searchPlayer = async () => {
     if (!playerName.trim()) return;
     setLoading(true);
     setError("");
+    setPlayerClan("");
+    setPlayerRanks([]);
     try {
-      const info = await runescapeApi.getPlayerInfo(playerName);
+      const now = Date.now();
+      // Verificar cache
+      let atlantisMembers: any[] = [];
+      let atlantisArgusMembers: any[] = [];
+      if (clanCache.atlantis && now - clanCache.atlantis.timestamp < CACHE_DURATION) {
+        atlantisMembers = clanCache.atlantis.members;
+      } else {
+        atlantisMembers = await runescapeApi.getAtlantisClanMembers();
+        clanCache.atlantis = { members: atlantisMembers, timestamp: now };
+      }
+      if (clanCache.atlantisArgus && now - clanCache.atlantisArgus.timestamp < CACHE_DURATION) {
+        atlantisArgusMembers = clanCache.atlantisArgus.members;
+      } else {
+        atlantisArgusMembers = await runescapeApi.getAtlantisArgusClanMembers();
+        clanCache.atlantisArgus = { members: atlantisArgusMembers, timestamp: now };
+      }
+      // Verificar se o jogador está em algum dos clãs
+      const foundAtlantis = atlantisMembers.find(
+        (m) => m.name.toLowerCase() === playerName.trim().toLowerCase()
+      );
+      const foundAtlantisArgus = atlantisArgusMembers.find(
+        (m) => m.name.toLowerCase() === playerName.trim().toLowerCase()
+      );
+      if (!foundAtlantis && !foundAtlantisArgus) {
+        setError("Jogador não encontrado nos clãs Atlantis ou Atlantis Argus");
+        setPlayerData(null);
+        setLoading(false);
+        return;
+      }
+      // Determinar a qual clã pertence e o(s) cargo(s)
+      let clanMsg = "";
+      let ranks: string[] = [];
+      if (foundAtlantis && foundAtlantisArgus) {
+        clanMsg = "Membro dos clãs Atlantis e Atlantis Argus";
+        ranks.push(`Atlantis: ${foundAtlantis.rank}`);
+        ranks.push(`Atlantis Argus: ${foundAtlantisArgus.rank}`);
+      } else if (foundAtlantis) {
+        clanMsg = "Membro do clã Atlantis";
+        ranks.push(`Atlantis: ${foundAtlantis.rank}`);
+      } else if (foundAtlantisArgus) {
+        clanMsg = "Membro do clã Atlantis Argus";
+        ranks.push(`Atlantis Argus: ${foundAtlantisArgus.rank}`);
+      }
+      setPlayerClan(clanMsg);
+      setPlayerRanks(ranks);
+      // Buscar dados do jogador na API oficial do RuneScape
+      const hiscores = await runescapeApi.getPlayerHiscores(playerName);
       // Adaptar estrutura para PlayerStats local
       setPlayerData({
-        name: info.username,
-        combat: info.combatlevel || 0,
-        totalLevel: info.totalskill || 0,
-        totalXp: info.totalxp || 0,
-        skills: info.skills || {}
+        name: playerName.trim(),
+        combat: hiscores.overall.level || 0,
+        totalLevel: hiscores.overall.level || 0,
+        totalXp: hiscores.overall.experience || 0,
+        skills: Object.fromEntries(
+          Object.entries(hiscores).map(([skill, data]) => [
+            skill,
+            {
+              level: data.level,
+              xp: data.experience,
+              rank: data.rank
+            }
+          ])
+        )
       });
       // Atualiza o updated_at do jogador no Supabase
-      await supabase.from("players").update({ updated_at: new Date().toISOString() }).eq("username", info.username);
+      await supabase.from("players").update({ updated_at: new Date().toISOString() }).eq("username", playerName.trim());
     } catch (err) {
       setError("Jogador não encontrado ou erro na API");
       setPlayerData(null);
@@ -117,7 +186,14 @@ const PlayerSearch = () => {
                 </div>
               </CardTitle>
               <CardDescription>
-                Membro do clã Atlantis
+                {playerClan}
+                {playerRanks.length > 0 && (
+                  <div className="mt-1 text-xs text-runescape-gold/80">
+                    {playerRanks.map((r, i) => (
+                      <div key={i}>{r}</div>
+                    ))}
+                  </div>
+                )}
               </CardDescription>
             </CardHeader>
             <CardContent>
