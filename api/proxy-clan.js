@@ -10,8 +10,8 @@ export default async function handler(req, res) {
       return res.status(response.status).json({ error: "Erro ao buscar dados do RuneScape" });
     }
     const buffer = await response.arrayBuffer();
-    const text = new TextDecoder('utf-8').decode(buffer);
-    console.log('PROXY RAW TEXT:', text.slice(0, 1000)); // Loga as primeiras 1000 chars do texto bruto
+    const text = new TextDecoder('latin1').decode(buffer);
+    console.log('PROXY RAW TEXT (latin1):', text.slice(0, 1000));
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.status(200).send(text);
   } catch (err) {
