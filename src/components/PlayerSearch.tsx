@@ -27,24 +27,14 @@ const PlayerSearch = () => {
     setLoading(true);
     setError("");
     try {
-      const hiscores = await runescapeApi.getPlayerHiscores(playerName);
+      const info = await runescapeApi.getPlayerInfo(playerName);
       // Adaptar estrutura para PlayerStats local
-      const skills: any = {};
-      Object.entries(hiscores).forEach(([key, value]: any) => {
-        if (value && typeof value === 'object' && 'level' in value && 'experience' in value && 'rank' in value) {
-          skills[key.charAt(0).toUpperCase() + key.slice(1)] = {
-            level: value.level,
-            xp: value.experience,
-            rank: value.rank
-          };
-        }
-      });
       setPlayerData({
-        name: playerName,
-        combat: hiscores.overall?.level || 0,
-        totalLevel: hiscores.overall?.level || 0,
-        totalXp: hiscores.overall?.experience || 0,
-        skills
+        name: info.username,
+        combat: info.combatlevel || 0,
+        totalLevel: info.totalskill || 0,
+        totalXp: info.totalxp || 0,
+        skills: info.skills || {}
       });
     } catch (err) {
       setError("Jogador não encontrado ou erro na API");
@@ -91,10 +81,9 @@ const PlayerSearch = () => {
               className="flex-1"
             />
             <Button 
-              onClick={searchPlayer} 
+              onClick={searchPlayer}
               disabled={loading || !playerName.trim()}
-              variant="runescape"
-              size="lg"
+              className="btn-runescape btn-lg"
             >
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
