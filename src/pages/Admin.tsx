@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { runescapeApi } from '@/services/runescapeApi';
 
 const ADMIN_EMAIL = 'xconexrs3@gmail.com';
 
@@ -12,6 +13,8 @@ const AdminPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<string | null>(null);
 
   // Token do ambiente (NUNCA expor em prod real, aqui só para demo/local)
   const token = import.meta.env.VITE_SYNC_PLAYERS_TOKEN || '';
@@ -64,6 +67,33 @@ const AdminPage = () => {
     }
   };
 
+  const handleImportPlayers = async () => {
+    setImporting(true);
+    setImportResult(null);
+    try {
+      const atlantis = await runescapeApi.getAtlantisClanMembers();
+      const argus = await runescapeApi.getAtlantisArgusClanMembers();
+      const allPlayers = [...atlantis, ...argus];
+      // Remover duplicados pelo nome
+      const uniquePlayers = Array.from(new Map(allPlayers.map(p => [p.name, p])).values());
+      let upserts = 0;
+      for (const player of uniquePlayers) {
+        const { error } = await supabase.from('players').upsert({
+          username: player.name,
+          clan_rank: player.rank,
+          total_experience: player.experience,
+          is_active: true
+        }, { onConflict: 'username' });
+        if (!error) upserts++;
+      }
+      setImportResult(`Importação concluída: ${upserts} jogadores atualizados/importados.`);
+    } catch (err: any) {
+      setImportResult('Erro ao importar jogadores.');
+    } finally {
+      setImporting(false);
+    }
+  };
+
   if (!user) {
     return (
       <div className="max-w-sm mx-auto mt-20 p-8 bg-card rounded shadow">
@@ -95,6 +125,10 @@ const AdminPage = () => {
         {loading ? 'Sincronizando...' : 'Sincronizar Jogadores Agora'}
       </Button>
       {result && <div className="mt-4 text-center text-sm text-muted-foreground">{result}</div>}
+      <Button onClick={handleImportPlayers} disabled={importing} className="w-full mb-4">
+        {importing ? 'Importando jogadores...' : 'Importar jogadores dos clãs'}
+      </Button>
+      {importResult && <div className="mt-4 text-center text-sm text-muted-foreground">{importResult}</div>}
       <div className="mt-8 text-xs text-muted-foreground">
         A sincronização automática ocorre de hora em hora.<br/>
         Use este botão apenas para forçar uma atualização manual.
