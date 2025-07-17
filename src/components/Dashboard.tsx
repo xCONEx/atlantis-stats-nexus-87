@@ -5,6 +5,7 @@ import PlayerSearch from "./PlayerSearch";
 import RecentPlayers from "./RecentPlayers";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import he from "he";
 
 const Dashboard = () => {
   const [stats, setStats] = useState<any[]>([]);
@@ -15,39 +16,52 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchStats = async () => {
       setLoadingStats(true);
-      const { data, error } = await supabase
-        .from('clan_statistics')
-        .select('clan_name, total_members, total_donations, total_events')
-        .order('created_at', { ascending: false })
-        .limit(2);
-      if (!error && data) {
-        setStats([
-          {
-            title: "Membros Ativos",
-            value: data.reduce((acc, c) => acc + (c.total_members || 0), 0),
-            change: "",
-            changeType: "positive",
-            icon: Users,
-            description: data.map(c => c.clan_name).join(' + ')
-          },
-          {
-            title: "Total Doações",
-            value: data.reduce((acc, c) => acc + (c.total_donations || 0), 0),
-            change: "",
-            changeType: "positive",
-            icon: Shield,
-            description: "Este mês"
-          },
-          {
-            title: "Eventos Concluídos",
-            value: data.reduce((acc, c) => acc + (c.total_events || 0), 0),
-            change: "",
-            changeType: "positive",
-            icon: Award,
-            description: "Este mês"
-          }
-        ]);
-      }
+      // Total de membros ativos
+      const { count: totalMembers } = await supabase
+        .from("players")
+        .select("id", { count: "exact", head: true })
+        .eq("is_active", true);
+      // Total de doações
+      const { data: donationsData, error: donationsError } = await supabase
+        .from("donations")
+        .select("amount");
+      const totalDonations = donationsData ? donationsData.reduce((acc, d) => acc + (d.amount || 0), 0) : 0;
+      // Total de eventos
+      const { count: totalEvents } = await supabase
+        .from("events")
+        .select("id", { count: "exact", head: true });
+      // Média de XP dos jogadores
+      const { data: xpData } = await supabase
+        .from("players")
+        .select("total_experience")
+        .eq("is_active", true);
+      const avgXp = xpData && xpData.length > 0 ? Math.round(xpData.reduce((acc, p) => acc + (p.total_experience || 0), 0) / xpData.length) : 0;
+      setStats([
+        {
+          title: "Membros Ativos",
+          value: totalMembers || 0,
+          icon: Users,
+          description: "Jogadores cadastrados ativos"
+        },
+        {
+          title: "Total Doações",
+          value: totalDonations.toLocaleString("pt-BR"),
+          icon: Shield,
+          description: "Doações registradas"
+        },
+        {
+          title: "Eventos Concluídos",
+          value: totalEvents || 0,
+          icon: Award,
+          description: "Eventos cadastrados"
+        },
+        {
+          title: "Média de XP",
+          value: avgXp.toLocaleString("pt-BR"),
+          icon: TrendingUp,
+          description: "XP médio dos membros"
+        }
+      ]);
       setLoadingStats(false);
     };
     fetchStats();
@@ -195,15 +209,15 @@ const Dashboard = () => {
               <CardTitle className="text-runescape-gold">Ações Rápidas</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button variant="runescape" className="w-full">
+              <Button className="btn-runescape w-full">
                 <Users className="h-4 w-4" />
                 Importar Membros do Clã
               </Button>
-              <Button variant="medieval" className="w-full">
+              <Button className="btn-medieval w-full">
                 <Shield className="h-4 w-4" />
                 Registrar Doação
               </Button>
-              <Button variant="outline" className="w-full">
+              <Button className="btn-outline w-full">
                 <TrendingUp className="h-4 w-4" />
                 Relatórios
               </Button>
