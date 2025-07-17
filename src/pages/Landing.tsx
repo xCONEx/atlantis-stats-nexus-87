@@ -45,18 +45,21 @@ const Landing = () => {
   useEffect(() => {
     const fetchStats = async () => {
       setLoadingStats(true);
-      const { data, error } = await supabase
-        .from('clan_statistics')
-        .select('total_members, total_donations')
-        .order('created_at', { ascending: false })
-        .limit(2);
-      if (!error && data) {
-        setStats({
-          members: data.reduce((acc, c) => acc + (c.total_members || 0), 0),
-          donations: data.reduce((acc, c) => acc + (c.total_donations || 0), 0),
-          bossKills: 0 // Se houver campo de boss kills, ajustar aqui
-        });
-      }
+      // Buscar total de membros ativos
+      const { count: totalMembers } = await supabase
+        .from('players')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_active', true);
+      // Buscar total de doações
+      const { data: donationsData, error: donationsError } = await supabase
+        .from('donations')
+        .select('amount');
+      const totalDonations = donationsData ? donationsData.reduce((acc, d) => acc + (d.amount || 0), 0) : 0;
+      setStats({
+        members: totalMembers || 0,
+        donations: totalDonations || 0,
+        bossKills: 0 // Se houver campo de boss kills, ajustar aqui
+      });
       setLoadingStats(false);
     };
     fetchStats();
