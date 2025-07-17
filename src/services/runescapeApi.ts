@@ -63,8 +63,8 @@ function normalizeSpaces(str: string): string {
 
 function sanitizeString(input: string): string {
   const normalized = normalizeSpaces(input.replace(/\+/g, ' ').normalize('NFC'));
-  // Remove qualquer caractere não ASCII básico
-  return normalized.replace(/[^\x20-\x7E]/g, '');
+  // Remove replacement character () e espaços invisíveis (zero-width)
+  return normalized.replace(/[\u200B-\u200D\uFEFF]/g, '');
 }
 
 class RuneScapeApiService {
