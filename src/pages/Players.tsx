@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import Layout from "@/components/Layout";
 import { useToast } from "@/hooks/use-toast";
 import { runescapeApi, type PlayerHiscores, type ClanMember } from "@/services/runescapeApi";
+import RunePixelsPlayerInfo from "@/components/RunePixelsPlayerInfo";
 
 const Players = () => {
   const [loading, setLoading] = useState(false);
@@ -72,6 +73,7 @@ const Players = () => {
           <h1 className="text-3xl font-cinzel font-bold text-runescape-gold">Jogadores</h1>
           <p className="text-muted-foreground">Busque e gerencie jogadores dos clãs</p>
         </div>
+        <RunePixelsPlayerInfo />
 
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 flex gap-2">
@@ -81,11 +83,11 @@ const Players = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && searchPlayer()}
             />
-            <Button onClick={searchPlayer} disabled={loading} variant="runescape">
+            <Button onClick={searchPlayer} disabled={loading} className="btn-runescape">
               <Search className="h-4 w-4" />
             </Button>
           </div>
-          <Button onClick={loadClanMembers} disabled={loading} variant="medieval">
+          <Button onClick={loadClanMembers} disabled={loading} className="btn-medieval">
             {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
             Carregar Membros dos Clãs
           </Button>
