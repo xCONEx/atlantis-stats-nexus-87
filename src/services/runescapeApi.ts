@@ -57,7 +57,8 @@ const SKILL_NAMES = [
 
 // Função utilitária para normalizar todos os tipos de espaço para espaço comum
 function normalizeSpaces(str: string): string {
-  return str.replace(/[\u00A0\u2000-\u200B\u202F\u205F\u3000]/g, ' ').replace(/\s+/g, ' ').trim();
+  // Substitui todos os tipos de espaço Unicode (incluindo U+00A0) por espaço comum
+  return str.replace(/[\s\u00A0\u1680\u180E\u2000-\u200A\u2028\u2029\u202F\u205F\u3000]+/g, ' ').trim();
 }
 
 class RuneScapeApiService {
