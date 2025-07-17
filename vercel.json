@@ -2,11 +2,5 @@
   "rewrites": [
     { "source": "/(.*)", "destination": "/" }
   ],
-  "cleanUrls": true,
-  "crons": [
-    {
-      "path": "/api/sync-players",
-      "schedule": "0 0 * * *"
-    }
-  ]
+  "cleanUrls": true
 }
