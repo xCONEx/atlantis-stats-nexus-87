@@ -17,6 +17,33 @@ interface DonationDetail {
   created_by?: string;
 }
 
+function cleanPlayerName(name: string) {
+  if (!name) return '';
+  return name.normalize('NFC').replace(/[^\p{L}\p{N}\s\-_'!@#$%^&*()+=,.?]/gu, '');
+}
+
+function formatGpWithColor(value: number) {
+  let display = value.toLocaleString('pt-BR');
+  let color = 'text-yellow-300';
+  if (value >= 1_000_000_000_000_000) {
+    display = (value / 1_000_000_000_000_000).toFixed(3).replace(/\.000$/, '') + 'Q';
+    color = 'text-orange-400';
+  } else if (value >= 1_000_000_000_000) {
+    display = (value / 1_000_000_000_000).toFixed(3).replace(/\.000$/, '') + 'T';
+    color = 'text-purple-400';
+  } else if (value >= 1_000_000_000) {
+    display = (value / 1_000_000_000).toFixed(3).replace(/\.000$/, '') + 'B';
+    color = 'text-blue-400';
+  } else if (value >= 10_000_000) {
+    display = (value / 1_000_000).toFixed(3).replace(/\.000$/, '') + 'M';
+    color = 'text-green-400';
+  } else if (value >= 100_000) {
+    display = (value / 1_000).toFixed(3).replace(/\.000$/, '') + 'K';
+    color = 'text-white';
+  }
+  return { display, color };
+}
+
 const PlayerDonationsModal = ({ player_id, player_name, open, onClose }: PlayerDonationsModalProps) => {
   const [donations, setDonations] = useState<DonationDetail[]>([]);
   const [loading, setLoading] = useState(false);
@@ -40,7 +67,7 @@ const PlayerDonationsModal = ({ player_id, player_name, open, onClose }: PlayerD
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-runescape-gold">Doações de {player_name}</DialogTitle>
+          <DialogTitle className="text-runescape-gold">Doações de {cleanPlayerName(player_name)}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           {loading ? (
@@ -52,7 +79,7 @@ const PlayerDonationsModal = ({ player_id, player_name, open, onClose }: PlayerD
               {donations.map((donation) => (
                 <Card key={donation.id} className="border border-border">
                   <CardHeader className="flex flex-row justify-between items-center p-3 pb-0">
-                    <CardTitle className="text-base font-medium">{donation.amount.toLocaleString('pt-BR')} GP</CardTitle>
+                    <CardTitle className={`text-base font-medium ${formatGpWithColor(donation.amount).color}`}>{formatGpWithColor(donation.amount).display} GP</CardTitle>
                     <span className="text-xs text-muted-foreground">{donation.created_at ? new Date(donation.created_at).toLocaleDateString('pt-BR') : ''}</span>
                   </CardHeader>
                   <CardContent className="p-3 pt-0">
