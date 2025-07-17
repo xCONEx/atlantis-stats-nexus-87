@@ -95,7 +95,7 @@ class RuneScapeApiService {
         throw new Error(`Clan "${clanName}" not found or API error`);
       }
       const data = await response.text();
-      console.log('FRONTEND RAW DATA:', data.slice(0, 1000)); // Loga as primeiras 1000 chars do texto bruto
+      // Removido o log de debug do frontend
       return this.parseClanMembersData(data);
     } catch (error) {
       console.error('Error fetching clan members:', error);
