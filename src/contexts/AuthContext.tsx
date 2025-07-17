@@ -11,10 +11,11 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string) => Promise<{ error: any; user: User | null }>;
   signOut: () => Promise<void>;
   userRole: string | null;
   signInWithDiscord: () => Promise<void>;
+  rsUsername?: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -45,6 +46,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [rsUsername, setRsUsername] = useState<string | null>(null);
   const [showFirstLoginModal, setShowFirstLoginModal] = useState(false);
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
   const [showLinkModal, setShowLinkModal] = useState(false);
@@ -77,6 +79,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Função para buscar o username do RuneScape
+  const fetchRsUsername = async (discordId: string) => {
+    const { data, error } = await supabase
+      .from('discord_links')
+      .select('username')
+      .eq('discord_id', discordId)
+      .single();
+    if (data && data.username) {
+      setRsUsername(data.username);
+    } else {
+      setRsUsername(null);
+    }
+  };
+
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -87,6 +103,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setTimeout(() => {
             fetchUserRole(session.user.id);
             associateDiscordToPlayer(session.user.id);
+            fetchRsUsername(session.user.id);
           }, 0);
           // Checar se já existe associação
           const { data: link } = await supabase
@@ -97,6 +114,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setShowLinkModal(!link);
         } else {
           setUserRole(null);
+          setRsUsername(null);
           setShowLinkModal(false);
         }
         setLoading(false);
@@ -109,6 +127,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session?.user) {
         fetchUserRole(session.user.id);
         associateDiscordToPlayer(session.user.id);
+        fetchRsUsername(session.user.id);
         // Checar se já existe associação
         const { data: link } = await supabase
           .from('discord_links')
@@ -116,6 +135,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .eq('discord_id', session.user.id)
           .single();
         setShowLinkModal(!link);
+      } else {
+        setRsUsername(null);
       }
       setLoading(false);
     });
@@ -291,6 +312,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signOut,
     userRole,
     signInWithDiscord,
+    rsUsername,
   };
 
   return (
@@ -299,12 +321,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       {showFirstLoginModal && (
         <FirstLoginModal
           userId={pendingUserId}
-          onSave={async (role, clan) => {
+          onSave={async (role, clan, username) => {
             await supabase.from('user_roles').insert({
               user_id: pendingUserId,
               role,
               clan_name: clan
             });
+            // Vincular Discord ao nick do RuneScape
+            await supabase.from('discord_links').upsert({
+              discord_id: pendingUserId,
+              username: username.trim()
+            }, { onConflict: 'discord_id,username' });
             setShowFirstLoginModal(false);
             setPendingUserId(null);
             window.location.href = '/dashboard';
