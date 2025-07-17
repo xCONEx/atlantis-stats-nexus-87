@@ -14,6 +14,34 @@ interface PlayerDonationSummary {
   total_amount: number;
 }
 
+function cleanPlayerName(name: string) {
+  if (!name) return '';
+  return name.normalize('NFC').replace(/[^\p{L}\p{N}\s\-_'!@#$%^&*()+=,.?]/gu, '');
+}
+
+function formatGpWithColor(value: number) {
+  let display = value.toLocaleString('pt-BR');
+  let color = 'text-yellow-300';
+  let sufixo = '';
+  if (value >= 1_000_000_000_000_000) {
+    display = (value / 1_000_000_000_000_000).toFixed(3).replace(/\.000$/, '') + 'Q';
+    color = 'text-orange-400';
+  } else if (value >= 1_000_000_000_000) {
+    display = (value / 1_000_000_000_000).toFixed(3).replace(/\.000$/, '') + 'T';
+    color = 'text-purple-400';
+  } else if (value >= 1_000_000_000) {
+    display = (value / 1_000_000_000).toFixed(3).replace(/\.000$/, '') + 'B';
+    color = 'text-blue-400';
+  } else if (value >= 10_000_000) {
+    display = (value / 1_000_000).toFixed(3).replace(/\.000$/, '') + 'M';
+    color = 'text-green-400';
+  } else if (value >= 100_000) {
+    display = (value / 1_000).toFixed(3).replace(/\.000$/, '') + 'K';
+    color = 'text-white';
+  }
+  return { display, color };
+}
+
 const Donations = () => {
   const [showDonationModal, setShowDonationModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -97,41 +125,47 @@ const Donations = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {playerDonations
                     .filter(player => !!player.player_id)
-                    .map((player) => (
-                      <Card
-                        key={player.player_id}
-                        className="shadow-md hover:shadow-lg transition cursor-pointer"
-                        onClick={() => setSelectedPlayer({ player_id: player.player_id, player_name: player.player_name })}
-                      >
-                        <CardHeader>
-                          <CardTitle className="truncate">{player.player_name}</CardTitle>
-                          <CardDescription>Total doado</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="flex items-center gap-2">
-                            <span className="text-runescape-gold font-bold text-lg">{player.total_amount.toLocaleString('pt-BR')} GP</span>
-                          </div>
-                          <Button variant="outline" size="sm" className="mt-2 w-full">Ver detalhes</Button>
-                        </CardContent>
-                      </Card>
-                    ))}
+                    .map((player) => {
+                      const gp = formatGpWithColor(player.total_amount);
+                      return (
+                        <Card
+                          key={player.player_id}
+                          className="shadow-md hover:shadow-lg transition cursor-pointer"
+                          onClick={() => setSelectedPlayer({ player_id: player.player_id, player_name: player.player_name })}
+                        >
+                          <CardHeader>
+                            <CardTitle className="truncate">{cleanPlayerName(player.player_name)}</CardTitle>
+                            <CardDescription>Total doado</CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="flex items-center gap-2">
+                              <span className={`font-bold text-lg ${gp.color}`}>{gp.display} GP</span>
+                            </div>
+                            <Button variant={"outline" as any} size={"sm" as any} className="mt-2 w-full">Ver detalhes</Button>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
                   {/* Jogadores sem player_id */}
                   {playerDonations
                     .filter(player => !player.player_id)
-                    .map((player) => (
-                      <Card key={player.player_name} className="shadow-md opacity-60">
-                        <CardHeader>
-                          <CardTitle className="truncate">{player.player_name}</CardTitle>
-                          <CardDescription>Total doado</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="flex items-center gap-2">
-                            <span className="text-runescape-gold font-bold text-lg">{player.total_amount.toLocaleString('pt-BR')} GP</span>
-                          </div>
-                          <div className="mt-2 text-xs text-muted-foreground">Jogador não cadastrado no sistema</div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                    .map((player) => {
+                      const gp = formatGpWithColor(player.total_amount);
+                      return (
+                        <Card key={player.player_name} className="shadow-md opacity-60">
+                          <CardHeader>
+                            <CardTitle className="truncate">{cleanPlayerName(player.player_name)}</CardTitle>
+                            <CardDescription>Total doado</CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="flex items-center gap-2">
+                              <span className={`font-bold text-lg ${gp.color}`}>{gp.display} GP</span>
+                            </div>
+                            <div className="mt-2 text-xs text-muted-foreground">Jogador não cadastrado no sistema</div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
                 </div>
               )}
             </CardContent>
