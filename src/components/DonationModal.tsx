@@ -29,6 +29,33 @@ interface DonationModalProps {
   editMode?: boolean;
 }
 
+function cleanPlayerName(name: string) {
+  if (!name) return '';
+  return name.normalize('NFC').replace(/[^\p{L}\p{N}\s\-_'!@#$%^&*()+=,.?]/gu, '');
+}
+
+function formatGpWithColor(value: number) {
+  let display = value.toLocaleString('pt-BR');
+  let color = 'text-yellow-300';
+  if (value >= 1_000_000_000_000_000) {
+    display = (value / 1_000_000_000_000_000).toFixed(3).replace(/\.000$/, '') + 'Q';
+    color = 'text-orange-400';
+  } else if (value >= 1_000_000_000_000) {
+    display = (value / 1_000_000_000_000).toFixed(3).replace(/\.000$/, '') + 'T';
+    color = 'text-purple-400';
+  } else if (value >= 1_000_000_000) {
+    display = (value / 1_000_000_000).toFixed(3).replace(/\.000$/, '') + 'B';
+    color = 'text-blue-400';
+  } else if (value >= 10_000_000) {
+    display = (value / 1_000_000).toFixed(3).replace(/\.000$/, '') + 'M';
+    color = 'text-green-400';
+  } else if (value >= 100_000) {
+    display = (value / 1_000).toFixed(3).replace(/\.000$/, '') + 'K';
+    color = 'text-white';
+  }
+  return { display, color };
+}
+
 const DonationModal = ({ open, onClose, onSave, donation, editMode = false }: DonationModalProps) => {
   const { user } = useAuth();
   const [formData, setFormData] = useState({
@@ -170,7 +197,7 @@ const DonationModal = ({ open, onClose, onSave, donation, editMode = false }: Do
             <div className="flex gap-2">
               <select
                 id="playerSelect"
-                className="input"
+                className="bg-[#181c24] text-runescape-gold placeholder-runescape-gold/70 border-2 border-border focus:border-runescape-gold rounded-md px-3 py-2 h-11 transition-colors w-1/2"
                 value={selectedPlayer?.id || ""}
                 onChange={e => {
                   const player = players.find(p => p.id === e.target.value);
@@ -178,17 +205,17 @@ const DonationModal = ({ open, onClose, onSave, donation, editMode = false }: Do
                   setFormData({ ...formData, playerName: player ? player.username : "" });
                 }}
               >
-                <option value="">Selecione um jogador</option>
+                <option value="" className="text-runescape-gold/70">Selecione um jogador</option>
                 {players.map((p) => (
-                  <option key={p.id} value={p.id}>{p.display_name || p.username}</option>
+                  <option key={p.id} value={p.id}>{cleanPlayerName(p.display_name || p.username)}</option>
                 ))}
               </select>
               <input
                 type="text"
                 id="playerName"
-                className="input flex-1"
+                className="bg-[#181c24] text-white placeholder-gray-400 border-2 border-border focus:border-runescape-gold rounded-md px-3 py-2 h-11 transition-colors flex-1"
                 placeholder="Ou digite o nome do jogador"
-                value={formData.playerName}
+                value={cleanPlayerName(formData.playerName)}
                 onChange={e => {
                   setFormData({ ...formData, playerName: e.target.value });
                   setSelectedPlayer(null);
@@ -212,9 +239,16 @@ const DonationModal = ({ open, onClose, onSave, donation, editMode = false }: Do
                 required
               />
               {formData.amount && (
-                <div className="text-sm text-muted-foreground mt-1">
-                  Equivale a: {formatAmountDisplay(formData.amount)} GP
-                </div>
+                (() => {
+                  const num = parseInt(formData.amount.replace(/\D/g, ''));
+                  if (isNaN(num)) return null;
+                  const gp = formatGpWithColor(num);
+                  return (
+                    <div className={`text-sm mt-1 font-bold ${gp.color}`}>
+                      Equivale a: {gp.display} GP
+                    </div>
+                  );
+                })()
               )}
             </div>
           </div>
