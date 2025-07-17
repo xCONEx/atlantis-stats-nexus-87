@@ -16,6 +16,7 @@ interface Donation {
   portals: number;
   date: string;
   created_by: string;
+  created_by_email?: string;
   notes?: string;
 }
 
@@ -34,7 +35,8 @@ const DonationModal = ({ open, onClose, onSave, donation, editMode = false }: Do
     event: "",
     portals: "1",
     date: new Date().toISOString().split('T')[0],
-    createdBy: "Admin", // In real app, get from auth context
+    createdBy: "", // não usar mais para o banco
+    createdByEmail: "", // novo campo para o e-mail
     notes: ""
   });
 
@@ -60,7 +62,8 @@ const DonationModal = ({ open, onClose, onSave, donation, editMode = false }: Do
         event: donation.event,
         portals: donation.portals.toString(),
         date: donation.date,
-        createdBy: donation.created_by,
+        createdBy: '',
+        createdByEmail: donation.created_by_email || "",
         notes: donation.notes || ""
       });
       // Find the player by ID for editing
@@ -73,7 +76,8 @@ const DonationModal = ({ open, onClose, onSave, donation, editMode = false }: Do
         event: "",
         portals: "1",
         date: new Date().toISOString().split('T')[0],
-        createdBy: "Admin",
+        createdBy: "",
+        createdByEmail: "",
         notes: ""
       });
       setSelectedPlayer(null);
@@ -101,7 +105,8 @@ const DonationModal = ({ open, onClose, onSave, donation, editMode = false }: Do
       event: formData.event,
       portals: parseInt(formData.portals),
       date: formData.date,
-      created_by: formData.createdBy,
+      created_by: null, // sempre null
+      created_by_email: formData.createdByEmail,
       notes: formData.notes
     };
     // Salvar no Supabase
@@ -109,6 +114,7 @@ const DonationModal = ({ open, onClose, onSave, donation, editMode = false }: Do
       {
         amount: donationData.amount,
         created_by: donationData.created_by,
+        created_by_email: donationData.created_by_email,
         description: donationData.notes,
         donation_type: 'gp',
         item_name: null,
@@ -279,6 +285,19 @@ const DonationModal = ({ open, onClose, onSave, donation, editMode = false }: Do
                 rows={3}
               />
             </div>
+          </div>
+
+          {/* Email de quem adicionou */}
+          <div className="space-y-2">
+            <Label htmlFor="createdByEmail">Seu e-mail</Label>
+            <Input
+              id="createdByEmail"
+              type="email"
+              value={formData.createdByEmail}
+              onChange={e => handleInputChange("createdByEmail", e.target.value)}
+              placeholder="Digite seu e-mail"
+              required
+            />
           </div>
 
           {/* Action Buttons */}
