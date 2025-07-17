@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { runescapeApi } from "@/services/runescapeApi";
 import { supabase } from "@/integrations/supabase/client";
+import PlayerDetailsModal from "./PlayerDetailsModal";
 
 interface PlayerStats {
   name: string;
@@ -34,6 +35,7 @@ const PlayerSearch = () => {
   const [error, setError] = useState("");
   const [playerClan, setPlayerClan] = useState<string>("");
   const [playerRanks, setPlayerRanks] = useState<string[]>([]);
+  const [modalOpen, setModalOpen] = useState(false);
 
   const searchPlayer = async () => {
     if (!playerName.trim()) return;
@@ -178,8 +180,14 @@ const PlayerSearch = () => {
           <Card className="clan-card runescape-glow">
             <CardHeader>
               <CardTitle className="flex items-center space-x-3 text-runescape-gold">
-                <Crown className="h-6 w-6" />
-                <span>{playerData.name}</span>
+                <button
+                  className="focus:outline-none hover:underline text-runescape-gold"
+                  onClick={() => setModalOpen(true)}
+                  style={{ background: "none", border: "none", padding: 0, margin: 0, cursor: "pointer" }}
+                >
+                  <Crown className="h-6 w-6 inline-block" />
+                  <span>{playerData.name}</span>
+                </button>
                 <div className="flex items-center space-x-2 text-sm bg-runescape-gold/20 px-3 py-1 rounded-full">
                   <Sword className="h-4 w-4" />
                   <span>Combat: {playerData.combat}</span>
@@ -258,6 +266,21 @@ const PlayerSearch = () => {
               </div>
             </CardContent>
           </Card>
+          <PlayerDetailsModal
+            player={{
+              name: playerData.name,
+              clan: playerClan,
+              combat: playerData.combat,
+              totalLevel: playerData.totalLevel,
+              totalXp: playerData.totalXp,
+              lastSeen: "-",
+              isOnline: false,
+              rank: playerRanks.join(", "),
+              joined: "-"
+            }}
+            open={modalOpen}
+            onClose={() => setModalOpen(false)}
+          />
         </div>
       )}
     </div>
