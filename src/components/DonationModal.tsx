@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Donation {
   id: string;
@@ -29,6 +30,7 @@ interface DonationModalProps {
 }
 
 const DonationModal = ({ open, onClose, onSave, donation, editMode = false }: DonationModalProps) => {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     playerName: "",
     amount: "",
@@ -77,12 +79,12 @@ const DonationModal = ({ open, onClose, onSave, donation, editMode = false }: Do
         portals: "1",
         date: new Date().toISOString().split('T')[0],
         createdBy: "",
-        createdByEmail: "",
+        createdByEmail: user?.email || "",
         notes: ""
       });
       setSelectedPlayer(null);
     }
-  }, [donation, editMode, open]);
+  }, [donation, editMode, open, user]);
 
   useEffect(() => {
     const fetchPlayers = async () => {
@@ -106,7 +108,7 @@ const DonationModal = ({ open, onClose, onSave, donation, editMode = false }: Do
       portals: parseInt(formData.portals),
       date: formData.date,
       created_by: null, // sempre null
-      created_by_email: formData.createdByEmail,
+      created_by_email: user?.email || "",
       notes: formData.notes
     };
     // Salvar no Supabase
@@ -288,17 +290,7 @@ const DonationModal = ({ open, onClose, onSave, donation, editMode = false }: Do
           </div>
 
           {/* Email de quem adicionou */}
-          <div className="space-y-2">
-            <Label htmlFor="createdByEmail">Seu e-mail</Label>
-            <Input
-              id="createdByEmail"
-              type="email"
-              value={formData.createdByEmail}
-              onChange={e => handleInputChange("createdByEmail", e.target.value)}
-              placeholder="Digite seu e-mail"
-              required
-            />
-          </div>
+          {/* Remover campo manual de email do formulário (não exibir mais para o usuário) */}
 
           {/* Action Buttons */}
           <div className="flex space-x-3 pt-4">
