@@ -4,12 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 const SYNC_TOKEN = process.env.SYNC_PLAYERS_TOKEN;
 
-export default async function handler(req, res) {
-  // Proteção por token simples
-  const auth = req.headers.authorization || '';
-  if (!SYNC_TOKEN || auth !== `Bearer ${SYNC_TOKEN}`) {
-    return res.status(401).json({ error: 'Não autorizado' });
-  }
+async function syncPlayers(res) {
   try {
     // Buscar membros dos clãs
     const atlantis = await runescapeApi.getAtlantisClanMembers();
@@ -42,4 +37,20 @@ export default async function handler(req, res) {
   } catch (err) {
     res.status(500).json({ error: 'Erro ao sincronizar jogadores', details: err.message });
   }
+}
+
+export default async function handler(req, res) {
+  if (req.method === 'GET') {
+    // Permitir GET sem token (usado pelo cron do Vercel)
+    return syncPlayers(res);
+  }
+  if (req.method === 'POST') {
+    // Proteção por token simples
+    const auth = req.headers.authorization || '';
+    if (!SYNC_TOKEN || auth !== `Bearer ${SYNC_TOKEN}`) {
+      return res.status(401).json({ error: 'Não autorizado' });
+    }
+    return syncPlayers(res);
+  }
+  res.status(405).json({ error: 'Método não permitido' });
 } 
