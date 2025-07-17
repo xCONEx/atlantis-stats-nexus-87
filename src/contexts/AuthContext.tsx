@@ -125,7 +125,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchUserRole(session.user.id);
+        await fetchUserRole(session.user.id);
         associateDiscordToPlayer(session.user.id);
         fetchRsUsername(session.user.id);
         // Checar se já existe associação
@@ -134,7 +134,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .select('username')
           .eq('discord_id', session.user.id)
           .single();
-        setShowLinkModal(!link);
+        // Só mostra o modal se não for admin
+        setShowLinkModal(!link && userRole !== 'admin');
       } else {
         setRsUsername(null);
       }
