@@ -27,7 +27,7 @@ const PlayerDonationsModal = ({ player_id, player_name, open, onClose }: PlayerD
       setLoading(true);
       const { data, error } = await supabase
         .from('donations')
-        .select('id, amount, created_at, created_by')
+        .select('id, amount, created_at, created_by_email')
         .eq('player_id', player_id)
         .order('created_at', { ascending: false });
       if (!error && data) setDonations(data);
@@ -56,7 +56,7 @@ const PlayerDonationsModal = ({ player_id, player_name, open, onClose }: PlayerD
                     <span className="text-xs text-muted-foreground">{donation.created_at ? new Date(donation.created_at).toLocaleDateString('pt-BR') : ''}</span>
                   </CardHeader>
                   <CardContent className="p-3 pt-0">
-                    <span className="text-xs text-muted-foreground">Adicionado por: {donation.created_by || 'Desconhecido'}</span>
+                    <span className="text-xs text-muted-foreground">Adicionado por: {donation.created_by_email || 'Desconhecido'}</span>
                   </CardContent>
                 </Card>
               ))}
