@@ -10,6 +10,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import axios from 'axios';
 
 interface Player {
   id: string;
@@ -152,6 +153,8 @@ const EnhancedDonationModal = ({ open, onClose, onSave, donation, editMode = fal
           title: "Sucesso",
           description: "Doação atualizada com sucesso"
         });
+        // Hook: atualizar role
+        await atualizarRoleDiscord(selectedPlayer.id);
       } else {
         const { error } = await supabase
           .from('donations')
@@ -163,6 +166,8 @@ const EnhancedDonationModal = ({ open, onClose, onSave, donation, editMode = fal
           title: "Sucesso",
           description: "Doação registrada com sucesso"
         });
+        // Hook: atualizar role
+        await atualizarRoleDiscord(selectedPlayer.id);
       }
 
       onSave();
@@ -190,6 +195,61 @@ const EnhancedDonationModal = ({ open, onClose, onSave, donation, editMode = fal
       return `${(value / 1000).toFixed(1)}K`;
     }
     return value.toLocaleString('pt-BR');
+  };
+
+  // Função para calcular cargo sugerido
+  const calcularCargo = (total) => {
+    if (total >= 5000000000) return 'Personalizado 👑';
+    if (total >= 2500000000) return 'Filantropo 🪙';
+    if (total >= 1000000000) return 'Bilionário 💷';
+    if (total >= 500000000) return 'Milionário 💵';
+    if (total >= 250000000) return 'Generoso 💰';
+    return 'Membro';
+  };
+
+  // Função para atualizar role no Discord
+  const atualizarRoleDiscord = async (playerId) => {
+    // Buscar Discord ID associado
+    const { data: link } = await supabase
+      .from('discord_links')
+      .select('discord_id')
+      .eq('player_id', playerId)
+      .single();
+    if (!link || !link.discord_id) return;
+    // Buscar total de doações
+    const { data: donations } = await supabase
+      .from('donations')
+      .select('amount')
+      .eq('player_id', playerId);
+    const total = donations ? donations.reduce((acc, d) => acc + (d.amount || 0), 0) : 0;
+    const cargo = calcularCargo(total);
+    // Chamar endpoint do bot
+    const ENV = process.env.DISCORD_ENV || 'production';
+    const BOT_TOKEN = ENV === 'test'
+      ? process.env.DISCORD_BOT_TOKEN_TEST || 'SEU_TOKEN_TESTE_AQUI'
+      : process.env.DISCORD_BOT_TOKEN_PROD || process.env.DISCORD_BOT_TOKEN || 'SEU_TOKEN_AQUI';
+    try {
+      await axios.post('/api/discord/roles', {
+        discord_id: link.discord_id,
+        action: 'update_role',
+      }, {
+        headers: { Authorization: `Bearer ${BOT_TOKEN}` }
+      });
+      // Logar mudança
+      await supabase.from('activity_logs').insert({
+        activity_type: 'role_update',
+        description: `Role atualizado para ${cargo} (doação: ${total})`,
+        player_id: playerId,
+        metadata: { cargo, total }
+      });
+    } catch (err) {
+      await supabase.from('activity_logs').insert({
+        activity_type: 'role_update_error',
+        description: `Erro ao atualizar role no Discord: ${err.message}`,
+        player_id: playerId,
+        metadata: { cargo, total }
+      });
+    }
   };
 
   return (

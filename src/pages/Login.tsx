@@ -9,13 +9,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Login = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+  // Removidos estados de email/senha
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const { signIn, user } = useAuth();
+  const { signInWithDiscord, user } = useAuth();
 
   useEffect(() => {
     if (user) {
@@ -28,10 +25,7 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const { error } = await signIn(email, password);
-      if (!error) {
-        // signIn já redireciona o usuário
-      }
+      // Error handling is done in the signIn function
     } catch (error) {
       // Error handling is done in the signIn function
     } finally {
@@ -56,107 +50,31 @@ const Login = () => {
             </div>
           </Link>
         </div>
-
-        {/* Login Form */}
+        {/* Login Social Discord */}
         <Card className="clan-card">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl font-cinzel text-runescape-gold">
-              Entrar na sua conta
+              Entrar com Discord
             </CardTitle>
             <CardDescription>
-              Acesse o dashboard do seu clã
+              Acesse o dashboard do seu clã usando sua conta Discord
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleLogin} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 pr-10"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between text-sm">
-                <Link
-                  to="/forgot-password"
-                  className="text-runescape-gold hover:underline"
-                >
-                  Esqueceu sua senha?
-                </Link>
-              </div>
-
-              <Button
-                type="submit"
-                variant="runescape"
-                size="lg"
-                className="w-full"
-                disabled={loading}
-              >
-                {loading ? (
-                  "Entrando..."
-                ) : (
-                  <>
-                    <Zap className="h-4 w-4" />
-                    Entrar
-                  </>
-                )}
-              </Button>
-            </form>
-
-            <div className="mt-6 text-center">
-              <p className="text-sm text-muted-foreground">
-                Não tem uma conta?{" "}
-                <Link
-                  to="/register"
-                  className="text-runescape-gold hover:underline font-medium"
-                >
-                  Criar conta
-                </Link>
-              </p>
-            </div>
+            <Button
+              type="button"
+              className="w-full flex items-center justify-center gap-2"
+              onClick={signInWithDiscord}
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20.317 4.3698A19.7913 19.7913 0 0 0 16.8854 3.1952C16.7252 2.8618 16.5127 2.5547 16.255 2.2888C15.9982 2.0229 15.7007 1.8031 15.3746 1.6414C15.0485 1.4797 14.6996 1.3796 14.343 1.3472C13.9864 1.3148 13.6291 1.3506 13.2884 1.4532C12.9477 1.5558 12.6301 1.7232 12.3532 1.9462C12.0763 2.1692 11.8462 2.4432 11.6772 2.7512C11.5082 3.0592 11.4042 3.3942 11.3732 3.7392C10.2282 3.7652 9.0862 3.9652 7.9652 4.3342C7.9652 4.3342 5.6322 6.6342 4.3172 9.3692C2.9022 12.3342 2.3172 15.3342 2.3172 15.3342C2.3172 15.3342 4.3172 17.3342 7.9652 18.3342C7.9652 18.3342 8.9652 17.3342 11.9652 17.3342C14.9652 17.3342 15.9652 18.3342 15.9652 18.3342C19.6132 17.3342 21.6132 15.3342 21.6132 15.3342C21.6132 15.3342 21.0282 12.3342 19.6132 9.3692C18.2982 6.6342 15.9652 4.3342 15.9652 4.3342C14.8442 3.9652 13.7022 3.7652 12.5572 3.7392C12.5262 3.3942 12.4222 3.0592 12.2532 2.7512C12.0842 2.4432 11.8541 2.1692 11.5772 1.9462C11.3003 1.7232 10.9827 1.5558 10.642 1.4532C10.3013 1.3506 9.944 1.3148 9.5874 1.3472C9.2308 1.3796 8.8819 1.4797 8.5558 1.6414C8.2297 1.8031 7.9322 2.0229 7.6754 2.2888C7.4177 2.5547 7.2052 2.8618 7.045 3.1952A19.7913 19.7913 0 0 0 3.6132 4.3698C2.1982 7.3342 1.6132 10.3342 1.6132 10.3342C1.6132 10.3342 3.6132 12.3342 7.2612 13.3342C7.2612 13.3342 8.2612 12.3342 11.2612 12.3342C14.2612 12.3342 15.2612 13.3342 15.2612 13.3342C18.9092 12.3342 20.9092 10.3342 20.9092 10.3342C20.9092 10.3342 20.3242 7.3342 18.9092 4.3698Z" fill="#5865F2"/></svg>
+              Entrar com Discord
+            </Button>
           </CardContent>
         </Card>
-
         {/* Back to Landing */}
         <div className="text-center">
           <Link to="/">
-            <Button variant="ghost">
+            <Button>
               ← Voltar para página inicial
             </Button>
           </Link>

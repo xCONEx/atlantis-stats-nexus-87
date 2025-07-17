@@ -3,6 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import FirstLoginModal from "@/components/FirstLoginModal";
+import { runescapeApi } from '@/services/runescapeApi';
 
 interface AuthContextType {
   user: User | null;
@@ -12,6 +13,7 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   userRole: string | null;
+  signInWithDiscord: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -46,6 +48,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
   const { toast } = useToast();
 
+  // Função para associar Discord ID ao nick do jogo
+  const associateDiscordToPlayer = async (discordId: string) => {
+    // Buscar membros dos clãs
+    const [atlantis, argus] = await Promise.all([
+      runescapeApi.getAtlantisClanMembers(),
+      runescapeApi.getAtlantisArgusClanMembers(),
+    ]);
+    // Buscar nick do usuário pelo email/nome do Discord (ajustar se necessário)
+    // Aqui, vamos assumir que o usuário já informou o nick em algum momento, ou que o email do Discord é igual ao username (ajustar conforme regra real)
+    // Para este exemplo, vamos associar pelo display_name do Discord, se disponível
+    const discordUser = user;
+    if (!discordUser) return;
+    const displayName = discordUser.user_metadata?.full_name || discordUser.user_metadata?.name || discordUser.email;
+    if (!displayName) return;
+    // Procurar nick nos clãs
+    const matches = [...atlantis, ...argus].filter(m => m.name.toLowerCase() === displayName.toLowerCase());
+    if (matches.length === 1) {
+      // Salvar associação
+      const player = matches[0];
+      await supabase.from('discord_links').upsert({
+        discord_id: discordUser.id,
+        username: player.name,
+        player_id: null // pode buscar o id real se necessário
+      }, { onConflict: 'discord_id,username' });
+    }
+  };
+
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -57,6 +86,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Defer role fetching to prevent deadlocks
           setTimeout(() => {
             fetchUserRole(session.user.id);
+            // Associação automática Discord ↔ Nick
+            associateDiscordToPlayer(session.user.id);
           }, 0);
         } else {
           setUserRole(null);
@@ -72,6 +103,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchUserRole(session.user.id);
+        // Associação automática Discord ↔ Nick
+        associateDiscordToPlayer(session.user.id);
       }
       setLoading(false);
     });
@@ -221,6 +254,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const signInWithDiscord = async () => {
+    try {
+      cleanupAuthState();
+      await supabase.auth.signInWithOAuth({
+        provider: 'discord',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+        },
+      });
+    } catch (error) {
+      toast({
+        title: 'Erro no login Discord',
+        description: 'Ocorreu um erro ao tentar autenticar com o Discord.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const value = {
     user,
     session,
@@ -229,6 +280,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signUp,
     signOut,
     userRole,
+    signInWithDiscord,
   };
 
   return (

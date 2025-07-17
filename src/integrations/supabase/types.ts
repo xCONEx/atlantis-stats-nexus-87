@@ -320,6 +320,73 @@ export type Database = {
         }
         Relationships: []
       }
+      discord_links: {
+        Row: {
+          id: string;
+          discord_id: string;
+          player_id: string | null;
+          username: string;
+          created_at: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          discord_id: string;
+          player_id?: string | null;
+          username: string;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          discord_id?: string;
+          player_id?: string | null;
+          username?: string;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "discord_links_player_id_fkey";
+            columns: ["player_id"];
+            isOneToOne: false;
+            referencedRelation: "players";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      custom_tags: {
+        Row: {
+          id: string;
+          player_id: string;
+          tag: string;
+          status: string;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          player_id: string;
+          tag: string;
+          status: string;
+          created_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          player_id?: string;
+          tag?: string;
+          status?: string;
+          created_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "custom_tags_player_id_fkey";
+            columns: ["player_id"];
+            isOneToOne: false;
+            referencedRelation: "players";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
     }
     Views: {
       [_ in never]: never
