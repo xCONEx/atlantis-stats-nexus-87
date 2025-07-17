@@ -125,6 +125,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           title: "Login realizado com sucesso!",
           description: "Bem-vindo ao Atlantis Stats Dashboard",
         });
+        // Após login, garantir que user_roles existe
+        try {
+          const { data: roleData, error: roleError } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', data.user.id)
+            .single();
+          if (!roleData) {
+            await supabase.from('user_roles').insert({
+              user_id: data.user.id,
+              role: 'member', // ou outro valor padrão
+              clan_name: 'Atlantis' // ou outro valor padrão
+            });
+          }
+        } catch (e) {
+          // Apenas loga, não bloqueia o login
+          console.error('Erro ao garantir user_roles:', e);
+        }
         window.location.href = '/dashboard';
       }
 
