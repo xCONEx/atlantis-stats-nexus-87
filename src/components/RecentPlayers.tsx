@@ -47,7 +47,7 @@ const RecentPlayers = () => {
       <CardHeader>
         <CardTitle className="flex items-center space-x-2 text-runescape-gold">
           <Clock className="h-5 w-5" />
-          <span>Buscas Recentes</span>
+          <span>Jogadores Recentes</span>
         </CardTitle>
         <CardDescription>
           Últimos jogadores pesquisados no sistema
