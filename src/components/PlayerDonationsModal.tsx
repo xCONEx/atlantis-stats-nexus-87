@@ -22,7 +22,7 @@ const PlayerDonationsModal = ({ player_id, player_name, open, onClose }: PlayerD
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !player_id) return;
     const fetchDonations = async () => {
       setLoading(true);
       const { data, error } = await supabase
