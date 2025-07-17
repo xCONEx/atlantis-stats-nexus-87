@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Download, RefreshCw, User, TrendingUp, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,119 +6,85 @@ import { Input } from "@/components/ui/input";
 import Layout from "@/components/Layout";
 import { useToast } from "@/hooks/use-toast";
 import { runescapeApi, type PlayerHiscores, type ClanMember } from "@/services/runescapeApi";
-import RunePixelsPlayerInfo from "@/components/RunePixelsPlayerInfo";
+import { supabase } from "@/integrations/supabase/client";
 
 const Players = () => {
   const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [atlantisMembers, setAtlantisMembers] = useState<ClanMember[]>([]);
-  const [atlantisArgusMembers, setAtlantisArgusMembers] = useState<ClanMember[]>([]);
-  const [selectedPlayer, setSelectedPlayer] = useState<PlayerHiscores | null>(null);
+  const [clanFilter, setClanFilter] = useState<string>("Atlantis");
+  const [players, setPlayers] = useState<any[]>([]);
   const { toast } = useToast();
 
-  const loadClanMembers = async () => {
+  const fetchPlayers = async (clan: string) => {
     setLoading(true);
-    try {
-      const [atlantis, atlantisArgus] = await Promise.all([
-        runescapeApi.getAtlantisClanMembers(),
-        runescapeApi.getAtlantisArgusClanMembers()
-      ]);
-      
-      setAtlantisMembers(atlantis);
-      setAtlantisArgusMembers(atlantisArgus);
-      
+    const { data, error } = await supabase
+      .from("players")
+      .select("username, clan_rank, total_experience")
+      .eq("clan_name", clan)
+      .order("total_experience", { ascending: false });
+    if (!error && data) {
+      setPlayers(data);
+    } else {
+      setPlayers([]);
       toast({
-        title: "Membros carregados",
-        description: `${atlantis.length + atlantisArgus.length} membros carregados com sucesso`,
-      });
-    } catch (error) {
-      toast({
-        title: "Erro ao carregar membros",
-        description: "Falha ao buscar dados dos clãs",
+        title: "Erro ao buscar jogadores",
+        description: error?.message || "Erro desconhecido",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   };
 
-  const searchPlayer = async () => {
-    if (!searchTerm.trim()) return;
-    
-    setLoading(true);
-    try {
-      const playerData = await runescapeApi.getPlayerHiscores(searchTerm);
-      setSelectedPlayer(playerData);
-      
-      toast({
-        title: "Jogador encontrado",
-        description: `Dados de ${searchTerm} carregados com sucesso`,
-      });
-    } catch (error) {
-      toast({
-        title: "Jogador não encontrado",
-        description: `Não foi possível encontrar o jogador "${searchTerm}"`,
-        variant: "destructive",
-      });
-      setSelectedPlayer(null);
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    fetchPlayers(clanFilter);
+  }, [clanFilter]);
 
   return (
     <Layout>
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-cinzel font-bold text-runescape-gold">Jogadores</h1>
-          <p className="text-muted-foreground">Busque e gerencie jogadores dos clãs</p>
+          <p className="text-muted-foreground">Veja todos os membros dos clãs importados</p>
         </div>
-        <RunePixelsPlayerInfo />
-
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 flex gap-2">
-            <Input
-              placeholder="Buscar jogador..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && searchPlayer()}
-            />
-            <Button onClick={searchPlayer} disabled={loading} className="btn-runescape">
-              <Search className="h-4 w-4" />
-            </Button>
-          </div>
-          <Button onClick={loadClanMembers} disabled={loading} className="btn-medieval">
-            {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-            Carregar Membros dos Clãs
+        <div className="flex gap-4 items-center mb-4">
+          <label className="font-bold">Clã:</label>
+          <select
+            value={clanFilter}
+            onChange={e => setClanFilter(e.target.value)}
+            className="border rounded px-2 py-1"
+          >
+            <option value="Atlantis">Atlantis</option>
+            <option value="Atlantis Argus">Atlantis Argus</option>
+          </select>
+          <Button onClick={() => fetchPlayers(clanFilter)} disabled={loading} className="btn-medieval">
+            Atualizar Lista
           </Button>
         </div>
-
-        {selectedPlayer && (
-          <Card className="clan-card">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2 text-runescape-gold">
-                <User className="h-5 w-5" />
-                <span>{searchTerm}</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-runescape-gold">
-                    {selectedPlayer.overall.level}
-                  </div>
-                  <div className="text-sm text-muted-foreground">Nível Total</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-runescape-gold">
-                    {runescapeApi.formatExperience(selectedPlayer.overall.experience)}
-                  </div>
-                  <div className="text-sm text-muted-foreground">XP Total</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        <div className="overflow-x-auto">
+          <table className="min-w-full border text-sm">
+            <thead>
+              <tr className="bg-muted-foreground/10">
+                <th className="px-2 py-1 text-left">Nome</th>
+                <th className="px-2 py-1 text-left">Rank</th>
+                <th className="px-2 py-1 text-left">XP</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan={3} className="text-center py-4">Carregando...</td></tr>
+              ) : players.length === 0 ? (
+                <tr><td colSpan={3} className="text-center py-4">Nenhum jogador encontrado</td></tr>
+              ) : (
+                players.map((p, i) => (
+                  <tr key={p.username} className={i % 2 === 0 ? "bg-white" : "bg-muted-foreground/5"}>
+                    <td className="px-2 py-1 font-bold">{p.username}</td>
+                    <td className="px-2 py-1">{p.clan_rank}</td>
+                    <td className="px-2 py-1">{p.total_experience?.toLocaleString("pt-BR")}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </Layout>
   );
