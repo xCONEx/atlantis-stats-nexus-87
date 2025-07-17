@@ -159,7 +159,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           description: error.message,
           variant: "destructive",
         });
-        return { error };
+        return { error, user: null };
       }
 
       if (data.user) {
@@ -169,14 +169,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       }
 
-      return { error: null };
+      return { error: null, user: data.user };
     } catch (error) {
       toast({
         title: "Erro no cadastro",
         description: "Ocorreu um erro inesperado. Tente novamente.",
         variant: "destructive",
       });
-      return { error };
+      return { error, user: null };
     }
   };
 
