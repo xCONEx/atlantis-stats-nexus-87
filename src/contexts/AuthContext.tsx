@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import FirstLoginModal from "@/components/FirstLoginModal";
 
 interface AuthContextType {
   user: User | null;
@@ -41,6 +42,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [showFirstLoginModal, setShowFirstLoginModal] = useState(false);
+  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -133,11 +136,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .eq('user_id', data.user.id)
             .single();
           if (!roleData) {
-            await supabase.from('user_roles').insert({
-              user_id: data.user.id,
-              role: 'member', // ou outro valor padrão
-              clan_name: 'Atlantis' // ou outro valor padrão
-            });
+            setPendingUserId(data.user.id);
+            setShowFirstLoginModal(true);
+            return { error: null };
           }
         } catch (e) {
           // Apenas loga, não bloqueia o login
@@ -230,5 +231,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     userRole,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+      {showFirstLoginModal && (
+        <FirstLoginModal
+          userId={pendingUserId}
+          onSave={async (role, clan) => {
+            await supabase.from('user_roles').insert({
+              user_id: pendingUserId,
+              role,
+              clan_name: clan
+            });
+            setShowFirstLoginModal(false);
+            setPendingUserId(null);
+            window.location.href = '/dashboard';
+          }}
+        />
+      )}
+    </AuthContext.Provider>
+  );
 };
