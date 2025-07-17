@@ -94,13 +94,9 @@ const DonationModal = ({ open, onClose, onSave, donation, editMode = false }: Do
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedPlayer) {
-      alert('Selecione um jogador válido.');
-      return;
-    }
-    
     const donationData = {
-      player_id: selectedPlayer.id,
+      player_id: selectedPlayer ? selectedPlayer.id : null,
+      player_name: formData.playerName || (selectedPlayer ? selectedPlayer.username : ""),
       amount: parseInt(formData.amount),
       event: formData.event,
       portals: parseInt(formData.portals),
@@ -108,17 +104,19 @@ const DonationModal = ({ open, onClose, onSave, donation, editMode = false }: Do
       created_by: formData.createdBy,
       notes: formData.notes
     };
-
     // Salvar no Supabase
     const { error } = await supabase.from('donations').insert([
       {
         amount: donationData.amount,
         created_by: donationData.created_by,
         description: donationData.notes,
-        donation_type: 'gp', // ou outro tipo se necessário
+        donation_type: 'gp',
         item_name: null,
         player_id: donationData.player_id,
-        // Adicionar outros campos conforme necessário
+        player_name: donationData.player_name,
+        event: donationData.event,
+        portals: donationData.portals,
+        date: donationData.date
       }
     ]);
     if (!error) {
@@ -161,24 +159,34 @@ const DonationModal = ({ open, onClose, onSave, donation, editMode = false }: Do
           {/* Player Name */}
           <div className="space-y-2">
             <Label htmlFor="playerName">Nome do Jogador</Label>
-            <select
-              id="playerName"
-              value={selectedPlayer ? selectedPlayer.id : ""}
-              onChange={e => {
-                const player = players.find(p => p.id === e.target.value);
-                setSelectedPlayer(player || null);
-                handleInputChange("playerName", player ? player.display_name || player.username : "");
-              }}
-              className="w-full p-2 border rounded"
-              required
-            >
-              <option value="">Selecione um jogador</option>
-              {players.map(player => (
-                <option key={player.id} value={player.id}>
-                  {player.display_name || player.username} {player.clan_name ? `(${player.clan_name})` : ""}
-                </option>
-              ))}
-            </select>
+            <div className="flex gap-2">
+              <select
+                id="playerSelect"
+                className="input"
+                value={selectedPlayer?.id || ""}
+                onChange={e => {
+                  const player = players.find(p => p.id === e.target.value);
+                  setSelectedPlayer(player || null);
+                  setFormData({ ...formData, playerName: player ? player.username : "" });
+                }}
+              >
+                <option value="">Selecione um jogador</option>
+                {players.map((p) => (
+                  <option key={p.id} value={p.id}>{p.display_name || p.username}</option>
+                ))}
+              </select>
+              <input
+                type="text"
+                id="playerName"
+                className="input flex-1"
+                placeholder="Ou digite o nome do jogador"
+                value={formData.playerName}
+                onChange={e => {
+                  setFormData({ ...formData, playerName: e.target.value });
+                  setSelectedPlayer(null);
+                }}
+              />
+            </div>
           </div>
 
           {/* Amount */}
