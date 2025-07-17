@@ -91,6 +91,39 @@ const PlayerDetailsModal = ({ player, open, onClose }: PlayerDetailsModalProps) 
     return Object.keys(playerStats.skills).filter(skill => !combatSkills.includes(skill));
   };
 
+  // Adicionar mapeamento de imagens das skills da wiki
+  const SKILL_IMAGES: { [key: string]: string } = {
+    Attack: "https://runescape.wiki/images/Attack-icon.png",
+    Defence: "https://runescape.wiki/images/Defence-icon.png",
+    Strength: "https://runescape.wiki/images/Strength-icon.png",
+    Constitution: "https://runescape.wiki/images/Constitution-icon.png",
+    Ranged: "https://runescape.wiki/images/Ranged-icon.png",
+    Prayer: "https://runescape.wiki/images/Prayer-icon.png",
+    Magic: "https://runescape.wiki/images/Magic-icon.png",
+    Cooking: "https://runescape.wiki/images/Cooking-icon.png",
+    Woodcutting: "https://runescape.wiki/images/Woodcutting-icon.png",
+    Fletching: "https://runescape.wiki/images/Fletching-icon.png",
+    Fishing: "https://runescape.wiki/images/Fishing-icon.png",
+    Firemaking: "https://runescape.wiki/images/Firemaking-icon.png",
+    Crafting: "https://runescape.wiki/images/Crafting-icon.png",
+    Smithing: "https://runescape.wiki/images/Smithing-icon.png",
+    Mining: "https://runescape.wiki/images/Mining-icon.png",
+    Herblore: "https://runescape.wiki/images/Herblore-icon.png",
+    Agility: "https://runescape.wiki/images/Agility-icon.png",
+    Thieving: "https://runescape.wiki/images/Thieving-icon.png",
+    Slayer: "https://runescape.wiki/images/Slayer-icon.png",
+    Farming: "https://runescape.wiki/images/Farming-icon.png",
+    Runecrafting: "https://runescape.wiki/images/Runecrafting-icon.png",
+    Hunter: "https://runescape.wiki/images/Hunter-icon.png",
+    Construction: "https://runescape.wiki/images/Construction-icon.png",
+    Summoning: "https://runescape.wiki/images/Summoning-icon.png",
+    Dungeoneering: "https://runescape.wiki/images/Dungeoneering-icon.png",
+    Divination: "https://runescape.wiki/images/Divination-icon.png",
+    Invention: "https://runescape.wiki/images/Invention-icon.png",
+    Archaeology: "https://runescape.wiki/images/Archaeology-icon.png",
+    Necromancy: "https://runescape.wiki/images/Necromancy-icon.png"
+  };
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -196,6 +229,11 @@ const PlayerDetailsModal = ({ player, open, onClose }: PlayerDetailsModalProps) 
             </TabsContent>
 
             <TabsContent value="skills" className="space-y-6">
+              <div className="flex justify-end mb-2">
+                <Button variant="outline" size="sm" onClick={fetchPlayerStats} disabled={loading}>
+                  {loading ? "Atualizando..." : "Atualizar Skills"}
+                </Button>
+              </div>
               {playerStats && (
                 <>
                   {/* Combat Skills */}
@@ -207,12 +245,15 @@ const PlayerDetailsModal = ({ player, open, onClose }: PlayerDetailsModalProps) 
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4">
                         {getCombatSkills().map((skill) => {
                           const data = playerStats.skills[skill];
                           return (
-                            <div key={skill} className="medieval-border p-4 text-center">
-                              <div className="font-medium text-runescape-gold mb-1">{skill}</div>
+                            <div key={skill} className="medieval-border p-4 text-center flex flex-col items-center">
+                              <div className="flex items-center justify-center mb-1">
+                                <img src={SKILL_IMAGES[skill]} alt={skill} className="w-7 h-7 mr-2" />
+                                <span className="font-medium text-runescape-gold">{skill}</span>
+                              </div>
                               <div className="text-2xl font-bold mb-1">{data.level}</div>
                               <div className="text-sm text-muted-foreground mb-1">
                                 {formatXp(data.xp)} XP
@@ -236,12 +277,15 @@ const PlayerDetailsModal = ({ player, open, onClose }: PlayerDetailsModalProps) 
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4">
                         {getNonCombatSkills().map((skill) => {
                           const data = playerStats.skills[skill];
                           return (
-                            <div key={skill} className="medieval-border p-4 text-center">
-                              <div className="font-medium text-runescape-gold mb-1">{skill}</div>
+                            <div key={skill} className="medieval-border p-4 text-center flex flex-col items-center">
+                              <div className="flex items-center justify-center mb-1">
+                                <img src={SKILL_IMAGES[skill]} alt={skill} className="w-7 h-7 mr-2" />
+                                <span className="font-medium text-runescape-gold">{skill}</span>
+                              </div>
                               <div className="text-2xl font-bold mb-1">{data.level}</div>
                               <div className="text-sm text-muted-foreground mb-1">
                                 {formatXp(data.xp)} XP
