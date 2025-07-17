@@ -79,19 +79,11 @@ const Register = () => {
 
       const { error, user: newUser } = await signUp(formData.email, formData.password);
       if (!error && newUser) {
-        // Inserir na tabela user_roles
-        const { error: roleError } = await supabase.from('user_roles').insert({
-          user_id: newUser.id,
-          role: formData.role,
-          clan_name: formData.clanName
+        // Não inserir em user_roles aqui! Apenas mostrar mensagem de confirmação.
+        toast({
+          title: "Conta criada com sucesso!",
+          description: "Verifique seu e-mail para confirmar a conta antes de acessar o sistema.",
         });
-        if (roleError) {
-          toast({
-            title: "Erro ao salvar cargo",
-            description: "Ocorreu um erro ao salvar o cargo do usuário.",
-            variant: "destructive",
-          });
-        }
       }
     } catch (error) {
       toast({
