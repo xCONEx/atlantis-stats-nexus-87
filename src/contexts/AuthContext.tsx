@@ -128,14 +128,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await fetchUserRole(session.user.id);
         associateDiscordToPlayer(session.user.id);
         fetchRsUsername(session.user.id);
-        // Checar se já existe associação
-        const { data: link } = await supabase
-          .from('discord_links')
-          .select('username')
-          .eq('discord_id', session.user.id)
-          .single();
-        // Só mostra o modal se não for admin
-        setShowLinkModal(!link && userRole !== 'admin');
+        // Desativar temporariamente o modal de linkar conta para testes
+        setShowLinkModal(false);
+        // // Checar se já existe associação
+        // const { data: link } = await supabase
+        //   .from('discord_links')
+        //   .select('username')
+        //   .eq('discord_id', session.user.id)
+        //   .single();
+        // // Só mostra o modal se não for admin
+        // setShowLinkModal(!link && userRole !== 'admin');
       } else {
         setRsUsername(null);
       }
