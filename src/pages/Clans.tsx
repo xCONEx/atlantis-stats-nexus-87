@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import Layout from "@/components/Layout";
 import { useToast } from "@/hooks/use-toast";
 import { runescapeApi } from "@/services/runescapeApi";
+import { supabase } from "@/integrations/supabase/client";
 
 const Clans = () => {
   const [loading, setLoading] = useState(false);
@@ -14,10 +15,24 @@ const Clans = () => {
     setLoading(true);
     try {
       const members = await runescapeApi.getClanMembers(clanName, 500);
-      
+      let successCount = 0;
+      let errorCount = 0;
+      for (const member of members) {
+        // Upsert (insert or update) player in Supabase
+        const { error } = await supabase.from("players").upsert({
+          username: member.name,
+          clan_name: clanName,
+          clan_rank: member.rank,
+          total_experience: member.experience,
+          is_active: true,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "username" });
+        if (error) errorCount++;
+        else successCount++;
+      }
       toast({
-        title: "Membros importados",
-        description: `${members.length} membros do clã ${clanName} importados com sucesso`,
+        title: "Importação concluída",
+        description: `${successCount} membros importados/atualizados com sucesso para o clã ${clanName}. ${errorCount > 0 ? errorCount + ' erros.' : ''}`,
       });
     } catch (error) {
       toast({
