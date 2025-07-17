@@ -68,6 +68,22 @@ const Players = () => {
     setLoading(false);
   };
 
+  const handlePlayerClick = async (username: string) => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("players")
+      .select("username, clan_rank, total_experience, combat_level, total_level, created_at, updated_at, last_updated, clan_name")
+      .eq("username", username)
+      .single();
+    setLoading(false);
+    if (error || !data) {
+      toast({ title: "Erro ao buscar jogador", description: error?.message || "Não encontrado", variant: "destructive" });
+      return;
+    }
+    setSelectedPlayer({ ...data });
+    setModalOpen(true);
+  };
+
   useEffect(() => {
     setPage(1);
     fetchPlayers(clanFilter, 1, search, rankFilter);
@@ -141,10 +157,7 @@ const Players = () => {
                   <tr
                     key={p.username}
                     className={i % 2 === 0 ? "bg-[#23283a] text-runescape-gold cursor-pointer hover:bg-[#2e3450]" : "bg-[#181c24] text-white cursor-pointer hover:bg-[#23283a]"}
-                    onClick={() => {
-                      setSelectedPlayer(p);
-                      setModalOpen(true);
-                    }}
+                    onClick={() => handlePlayerClick(p.username)}
                   >
                     <td className="px-3 py-2 font-bold break-all">{cleanName(p.username)}</td>
                     <td className="px-3 py-2">{p.clan_rank}</td>
@@ -181,14 +194,14 @@ const Players = () => {
       <PlayerDetailsModal
         player={selectedPlayer ? {
           name: selectedPlayer.username,
-          clan: clanFilter,
-          combat: selectedPlayer.combat_level || 0,
-          totalLevel: selectedPlayer.total_level || 0,
-          totalXp: selectedPlayer.total_experience || 0,
-          lastSeen: selectedPlayer.last_seen || '',
-          isOnline: selectedPlayer.is_online || false,
+          clan: selectedPlayer.clan_name || clanFilter,
+          combat: selectedPlayer.combat_level ?? 0,
+          totalLevel: selectedPlayer.total_level ?? 0,
+          totalXp: selectedPlayer.total_experience ?? 0,
+          lastSeen: selectedPlayer.last_updated || selectedPlayer.updated_at || '',
+          isOnline: false, // Ajuste se houver campo
           rank: selectedPlayer.clan_rank || '',
-          joined: selectedPlayer.joined_at || ''
+          joined: selectedPlayer.created_at || ''
         } : null}
         open={modalOpen && !!selectedPlayer}
         onClose={() => setModalOpen(false)}
