@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { runescapeApi } from "@/services/runescapeApi";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PlayerStats {
   name: string;
@@ -36,6 +37,8 @@ const PlayerSearch = () => {
         totalXp: info.totalxp || 0,
         skills: info.skills || {}
       });
+      // Atualiza o updated_at do jogador no Supabase
+      await supabase.from("players").update({ updated_at: new Date().toISOString() }).eq("username", info.username);
     } catch (err) {
       setError("Jogador não encontrado ou erro na API");
       setPlayerData(null);
