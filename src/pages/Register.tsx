@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabaseClient";
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -37,7 +38,8 @@ const Register = () => {
     { value: "coordinator", label: "Coordenador", icon: User },
     { value: "fiscal", label: "Fiscal", icon: User },
     { value: "organizer", label: "Organizador", icon: User },
-    { value: "administrator", label: "Administrador", icon: User }
+    { value: "administrator", label: "Administrador", icon: User },
+    { value: "admin-legado", label: "Admin-legado", icon: User }
   ];
 
   const clans = [
@@ -75,9 +77,21 @@ const Register = () => {
         return;
       }
 
-      const { error } = await signUp(formData.email, formData.password);
-      if (!error) {
-        // signUp já mostra a mensagem de sucesso
+      const { error, user: newUser } = await signUp(formData.email, formData.password);
+      if (!error && newUser) {
+        // Inserir na tabela user_roles
+        const { error: roleError } = await supabase.from('user_roles').insert({
+          user_id: newUser.id,
+          role: formData.role,
+          clan_name: formData.clanName
+        });
+        if (roleError) {
+          toast({
+            title: "Erro ao salvar cargo",
+            description: "Ocorreu um erro ao salvar o cargo do usuário.",
+            variant: "destructive",
+          });
+        }
       }
     } catch (error) {
       toast({
