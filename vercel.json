@@ -6,9 +6,9 @@
   "crons": [
     {
       "path": "/api/sync-players",
-      "schedule": "0 * * * *",
+      "schedule": "0 0 * * *",
       "headers": {
-        "Authorization": "Bearer syncplayersatlantis"
+        "Authorization": "Bearer SEU_TOKEN_AQUI"
       }
     }
   ]
