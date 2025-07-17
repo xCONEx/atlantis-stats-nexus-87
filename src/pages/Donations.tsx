@@ -1,14 +1,33 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Search, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import Layout from "@/components/Layout";
 import DonationModal from "@/components/DonationModal";
+import { supabase } from "@/integrations/supabase/client";
 
 const Donations = () => {
   const [showDonationModal, setShowDonationModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [donations, setDonations] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDonations = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('donations')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(20);
+      if (!error && data) {
+        setDonations(data);
+      }
+      setLoading(false);
+    };
+    fetchDonations();
+  }, [showDonationModal]);
 
   return (
     <Layout>
@@ -27,12 +46,24 @@ const Donations = () => {
         <Card className="clan-card">
           <CardHeader>
             <CardTitle className="text-runescape-gold">Controle de Doações</CardTitle>
-            <CardDescription>Sistema integrado com APIs reais do RuneScape</CardDescription>
+            <CardDescription>Lista de doações registradas</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">
-              As doações serão integradas com o banco de dados Supabase após a configuração.
-            </p>
+            {loading ? (
+              <p className="text-muted-foreground">Carregando doações...</p>
+            ) : donations.length === 0 ? (
+              <p className="text-muted-foreground">Nenhuma doação encontrada.</p>
+            ) : (
+              <ul className="divide-y divide-border">
+                {donations.map((donation) => (
+                  <li key={donation.id} className="py-2 flex justify-between items-center">
+                    <span className="font-medium">{donation.player_name || 'Jogador'}</span>
+                    <span className="text-runescape-gold font-bold">{donation.amount.toLocaleString('pt-BR')} GP</span>
+                    <span className="text-xs text-muted-foreground">{donation.created_at ? new Date(donation.created_at).toLocaleDateString('pt-BR') : ''}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </CardContent>
         </Card>
       </div>

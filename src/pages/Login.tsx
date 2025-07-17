@@ -150,17 +150,6 @@ const Login = () => {
                 </Link>
               </p>
             </div>
-
-            {/* Demo Credentials */}
-            <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-              <p className="text-xs text-muted-foreground text-center mb-2">
-                Credenciais de demonstração:
-              </p>
-              <div className="text-xs text-center space-y-1">
-                <div>Email: admin@atlantis.com</div>
-                <div>Senha: atlantis123</div>
-              </div>
-            </div>
           </CardContent>
         </Card>
 

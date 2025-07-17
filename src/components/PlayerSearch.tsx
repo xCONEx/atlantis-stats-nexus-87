@@ -3,6 +3,7 @@ import { Search, Loader2, User, Crown, Sword } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { runescapeApi } from "@/services/runescapeApi";
 
 interface PlayerStats {
   name: string;
@@ -20,45 +21,33 @@ const PlayerSearch = () => {
   const [playerData, setPlayerData] = useState<PlayerStats | null>(null);
   const [error, setError] = useState("");
 
-  const mockPlayerData: PlayerStats = {
-    name: "AtlantisLord",
-    combat: 138,
-    totalLevel: 2736,
-    totalXp: 425847392,
-    skills: {
-      Attack: { level: 99, xp: 13034431, rank: 125847 },
-      Defence: { level: 99, xp: 13034431, rank: 156291 },
-      Strength: { level: 99, xp: 13034431, rank: 143567 },
-      Constitution: { level: 99, xp: 16274853, rank: 98234 },
-      Ranged: { level: 99, xp: 13034431, rank: 187432 },
-      Prayer: { level: 99, xp: 13034431, rank: 67891 },
-      Magic: { level: 99, xp: 13034431, rank: 203456 },
-      Cooking: { level: 99, xp: 13034431, rank: 89123 },
-      Woodcutting: { level: 99, xp: 13034431, rank: 145678 },
-      Fletching: { level: 99, xp: 13034431, rank: 76543 },
-      Fishing: { level: 99, xp: 13034431, rank: 198765 },
-      Firemaking: { level: 99, xp: 13034431, rank: 123456 },
-    }
-  };
-
+  // Remover mockPlayerData e usar API real
   const searchPlayer = async () => {
     if (!playerName.trim()) return;
-    
     setLoading(true);
     setError("");
-    
     try {
-      // Simulated API call - replace with actual RuneScape API integration
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      if (playerName.toLowerCase().includes("atlantis")) {
-        setPlayerData(mockPlayerData);
-      } else {
-        setError("Jogador não encontrado ou não é membro do clã Atlantis");
-        setPlayerData(null);
-      }
+      const hiscores = await runescapeApi.getPlayerHiscores(playerName);
+      // Adaptar estrutura para PlayerStats local
+      const skills: any = {};
+      Object.entries(hiscores).forEach(([key, value]: any) => {
+        if (value && typeof value === 'object' && 'level' in value && 'experience' in value && 'rank' in value) {
+          skills[key.charAt(0).toUpperCase() + key.slice(1)] = {
+            level: value.level,
+            xp: value.experience,
+            rank: value.rank
+          };
+        }
+      });
+      setPlayerData({
+        name: playerName,
+        combat: hiscores.overall?.level || 0,
+        totalLevel: hiscores.overall?.level || 0,
+        totalXp: hiscores.overall?.experience || 0,
+        skills
+      });
     } catch (err) {
-      setError("Erro ao buscar dados do jogador");
+      setError("Jogador não encontrado ou erro na API");
       setPlayerData(null);
     } finally {
       setLoading(false);

@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { runescapeApi } from "@/services/runescapeApi";
 
 interface Player {
   name: string;
@@ -40,57 +41,7 @@ const PlayerDetailsModal = ({ player, open, onClose }: PlayerDetailsModalProps) 
   const [playerStats, setPlayerStats] = useState<PlayerStats | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Mock data for detailed stats
-  const mockStats: PlayerStats = {
-    skills: {
-      "Attack": { level: 99, xp: 13034431, rank: 125847 },
-      "Defence": { level: 99, xp: 13034431, rank: 156291 },
-      "Strength": { level: 99, xp: 13034431, rank: 143567 },
-      "Constitution": { level: 99, xp: 16274853, rank: 98234 },
-      "Ranged": { level: 99, xp: 13034431, rank: 187432 },
-      "Prayer": { level: 99, xp: 13034431, rank: 67891 },
-      "Magic": { level: 99, xp: 13034431, rank: 203456 },
-      "Cooking": { level: 99, xp: 13034431, rank: 89123 },
-      "Woodcutting": { level: 99, xp: 13034431, rank: 145678 },
-      "Fletching": { level: 99, xp: 13034431, rank: 76543 },
-      "Fishing": { level: 99, xp: 13034431, rank: 198765 },
-      "Firemaking": { level: 99, xp: 13034431, rank: 123456 },
-      "Crafting": { level: 99, xp: 13034431, rank: 98765 },
-      "Smithing": { level: 99, xp: 13034431, rank: 112233 },
-      "Mining": { level: 99, xp: 13034431, rank: 87654 },
-      "Herblore": { level: 99, xp: 13034431, rank: 234567 },
-      "Agility": { level: 99, xp: 13034431, rank: 345678 },
-      "Thieving": { level: 99, xp: 13034431, rank: 456789 },
-      "Slayer": { level: 99, xp: 13034431, rank: 23456 },
-      "Farming": { level: 99, xp: 13034431, rank: 78901 },
-      "Runecrafting": { level: 99, xp: 13034431, rank: 567890 },
-      "Hunter": { level: 99, xp: 13034431, rank: 123890 },
-      "Construction": { level: 99, xp: 13034431, rank: 234901 },
-      "Summoning": { level: 99, xp: 13034431, rank: 345012 },
-      "Dungeoneering": { level: 120, xp: 104273167, rank: 45678 },
-      "Divination": { level: 99, xp: 13034431, rank: 56789 },
-      "Invention": { level: 120, xp: 80618654, rank: 23456 },
-      "Archaeology": { level: 120, xp: 80618654, rank: 34567 }
-    },
-    bosses: {
-      "Telos": { kills: 1247, rank: 3456 },
-      "Araxxor": { kills: 2891, rank: 1234 },
-      "Nex": { kills: 567, rank: 7890 },
-      "Vorago": { kills: 234, rank: 5678 },
-      "Rise of the Six": { kills: 89, rank: 9012 },
-      "Solak": { kills: 156, rank: 4567 },
-      "Raksha": { kills: 445, rank: 2345 },
-      "Kerapac": { kills: 278, rank: 6789 }
-    },
-    minigames: {
-      "Castle Wars": { score: 1234, rank: 5678 },
-      "Pest Control": { score: 2345, rank: 3456 },
-      "Soul Wars": { score: 567, rank: 7890 },
-      "Barbarian Assault": { score: 890, rank: 2345 },
-      "Fist of Guthix": { score: 1567, rank: 4567 }
-    }
-  };
-
+  // Remover mockStats e usar API real
   useEffect(() => {
     if (open && player) {
       fetchPlayerStats();
@@ -100,11 +51,23 @@ const PlayerDetailsModal = ({ player, open, onClose }: PlayerDetailsModalProps) 
   const fetchPlayerStats = async () => {
     setLoading(true);
     try {
-      // Simular chamada para API do RuneScape
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setPlayerStats(mockStats);
+      const hiscores = await runescapeApi.getPlayerHiscores(player.name);
+      // Adaptar estrutura para PlayerStats local
+      const skills: any = {};
+      Object.entries(hiscores).forEach(([key, value]: any) => {
+        if (value && typeof value === 'object' && 'level' in value && 'experience' in value && 'rank' in value) {
+          skills[key.charAt(0).toUpperCase() + key.slice(1)] = {
+            level: value.level,
+            xp: value.experience,
+            rank: value.rank
+          };
+        }
+      });
+      // Bosses e minigames podem ser integrados depois, se a API fornecer
+      setPlayerStats({ skills, bosses: {}, minigames: {} });
     } catch (error) {
       console.error("Erro ao buscar stats do jogador:", error);
+      setPlayerStats(null);
     } finally {
       setLoading(false);
     }

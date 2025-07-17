@@ -3,63 +3,78 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import PlayerSearch from "./PlayerSearch";
 import RecentPlayers from "./RecentPlayers";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const Dashboard = () => {
-  const stats = [
-    {
-      title: "Membros Ativos",
-      value: "247",
-      change: "+12",
-      changeType: "positive",
-      icon: Users,
-      description: "Atlantis + Atlantis Argus"
-    },
-    {
-      title: "Total Doações",
-      value: "1.2B",
-      change: "+45M",
-      changeType: "positive", 
-      icon: Shield,
-      description: "Este mês"
-    },
-    {
-      title: "Boss Kills",
-      value: "8,439",
-      change: "+127",
-      changeType: "positive",
-      icon: Target,
-      description: "Esta semana"
-    },
-    {
-      title: "Eventos Concluídos",
-      value: "23",
-      change: "+3",
-      changeType: "positive",
-      icon: Award,
-      description: "Este mês"
-    }
-  ];
+  const [stats, setStats] = useState<any[]>([]);
+  const [loadingStats, setLoadingStats] = useState(true);
+  const [clanEvents, setClanEvents] = useState<any[]>([]);
+  const [loadingEvents, setLoadingEvents] = useState(true);
 
-  const clanEvents = [
-    {
-      title: "Raid Noturno - Solak",
-      date: "Hoje às 21:00",
-      participants: 8,
-      status: "confirmado"
-    },
-    {
-      title: "PvM Teaching - Telos",
-      date: "Amanhã às 19:30",
-      participants: 12,
-      status: "aberto"
-    },
-    {
-      title: "Bossing Marathon",
-      date: "Sábado às 14:00",
-      participants: 6,
-      status: "planejamento"
-    }
-  ];
+  useEffect(() => {
+    const fetchStats = async () => {
+      setLoadingStats(true);
+      const { data, error } = await supabase
+        .from('clan_statistics')
+        .select('clan_name, total_members, total_donations, total_events')
+        .order('created_at', { ascending: false })
+        .limit(2);
+      if (!error && data) {
+        setStats([
+          {
+            title: "Membros Ativos",
+            value: data.reduce((acc, c) => acc + (c.total_members || 0), 0),
+            change: "",
+            changeType: "positive",
+            icon: Users,
+            description: data.map(c => c.clan_name).join(' + ')
+          },
+          {
+            title: "Total Doações",
+            value: data.reduce((acc, c) => acc + (c.total_donations || 0), 0),
+            change: "",
+            changeType: "positive",
+            icon: Shield,
+            description: "Este mês"
+          },
+          {
+            title: "Eventos Concluídos",
+            value: data.reduce((acc, c) => acc + (c.total_events || 0), 0),
+            change: "",
+            changeType: "positive",
+            icon: Award,
+            description: "Este mês"
+          }
+        ]);
+      }
+      setLoadingStats(false);
+    };
+    fetchStats();
+  }, []);
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      setLoadingEvents(true);
+      const { data, error } = await supabase
+        .from('events')
+        .select('id, title, start_time, current_participants, status')
+        .order('start_time', { ascending: true })
+        .limit(5);
+      if (!error && data) {
+        setClanEvents(
+          data.map((e: any) => ({
+            title: e.title,
+            date: e.start_time ? new Date(e.start_time).toLocaleString('pt-BR') : '',
+            participants: e.current_participants || 0,
+            status: e.status || 'planejamento'
+          }))
+        );
+      }
+      setLoadingEvents(false);
+    };
+    fetchEvents();
+  }, []);
 
   return (
     <div className="space-y-8">
@@ -76,7 +91,11 @@ const Dashboard = () => {
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat) => (
+        {loadingStats ? (
+          <div className="col-span-4 text-center text-muted-foreground">Carregando estatísticas...</div>
+        ) : stats.length === 0 ? (
+          <div className="col-span-4 text-center text-muted-foreground">Nenhuma estatística encontrada.</div>
+        ) : stats.map((stat) => (
           <Card key={stat.title} className="clan-card hover:scale-105 transition-transform">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -128,7 +147,11 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {clanEvents.map((event, index) => (
+                {loadingEvents ? (
+                  <div className="text-center text-muted-foreground">Carregando eventos...</div>
+                ) : clanEvents.length === 0 ? (
+                  <div className="text-center text-muted-foreground">Nenhum evento encontrado.</div>
+                ) : clanEvents.map((event, index) => (
                   <div
                     key={index}
                     className="border border-border rounded-lg p-4 hover:border-runescape-gold/50 transition-colors"

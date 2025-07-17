@@ -2,6 +2,8 @@ import { Zap, Shield, Users, TrendingUp, Search, Target, Award, ChevronRight } f
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const Landing = () => {
   const features = [
@@ -37,6 +39,29 @@ const Landing = () => {
     }
   ];
 
+  const [stats, setStats] = useState({ members: 0, donations: 0, bossKills: 0 });
+  const [loadingStats, setLoadingStats] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      setLoadingStats(true);
+      const { data, error } = await supabase
+        .from('clan_statistics')
+        .select('total_members, total_donations')
+        .order('created_at', { ascending: false })
+        .limit(2);
+      if (!error && data) {
+        setStats({
+          members: data.reduce((acc, c) => acc + (c.total_members || 0), 0),
+          donations: data.reduce((acc, c) => acc + (c.total_donations || 0), 0),
+          bossKills: 0 // Se houver campo de boss kills, ajustar aqui
+        });
+      }
+      setLoadingStats(false);
+    };
+    fetchStats();
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-background">
       {/* Header */}
@@ -57,12 +82,12 @@ const Landing = () => {
             
             <div className="flex items-center space-x-4">
               <Link to="/login">
-                <Button variant="ghost">
+                <Button className="btn-ghost">
                   Entrar
                 </Button>
               </Link>
               <Link to="/register">
-                <Button variant="runescape">
+                <Button className="btn-runescape">
                   Criar Conta
                 </Button>
               </Link>
@@ -86,14 +111,14 @@ const Landing = () => {
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/register">
-              <Button variant="runescape" size="xl" className="w-full sm:w-auto">
+              <Button className="btn-runescape w-full sm:w-auto text-xl py-4 px-8">
                 <Zap className="h-5 w-5" />
                 Começar Agora
                 <ChevronRight className="h-5 w-5" />
               </Button>
             </Link>
             <Link to="/dashboard">
-              <Button variant="medieval" size="xl" className="w-full sm:w-auto">
+              <Button className="btn-medieval w-full sm:w-auto text-xl py-4 px-8">
                 <TrendingUp className="h-5 w-5" />
                 Ver Demo
               </Button>
@@ -141,19 +166,25 @@ const Landing = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="text-center space-y-4">
-              <div className="text-5xl font-bold text-runescape-gold">247</div>
+              <div className="text-5xl font-bold text-runescape-gold">
+                {loadingStats ? '...' : stats.members.toLocaleString('pt-BR')}
+              </div>
               <div className="text-xl text-muted-foreground">Membros Ativos</div>
               <div className="text-sm text-muted-foreground">Atlantis + Atlantis Argus</div>
             </div>
             
             <div className="text-center space-y-4">
-              <div className="text-5xl font-bold text-runescape-blue">1.2B</div>
+              <div className="text-5xl font-bold text-runescape-blue">
+                {loadingStats ? '...' : stats.donations.toLocaleString('pt-BR')}
+              </div>
               <div className="text-xl text-muted-foreground">Total Doações</div>
               <div className="text-sm text-muted-foreground">Valor acumulado</div>
             </div>
             
             <div className="text-center space-y-4">
-              <div className="text-5xl font-bold text-runescape-gold">8,439</div>
+              <div className="text-5xl font-bold text-runescape-gold">
+                {loadingStats ? '...' : stats.bossKills.toLocaleString('pt-BR')}
+              </div>
               <div className="text-xl text-muted-foreground">Boss Kills</div>
               <div className="text-sm text-muted-foreground">Esta semana</div>
             </div>
@@ -177,7 +208,7 @@ const Landing = () => {
               </div>
               
               <Link to="/register">
-                <Button variant="runescape" size="xl">
+                <Button className="btn-runescape text-xl py-4 px-8">
                   <Zap className="h-5 w-5" />
                   Criar Conta Gratuita
                   <ChevronRight className="h-5 w-5" />

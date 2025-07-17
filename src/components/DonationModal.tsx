@@ -6,15 +6,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Donation {
   id: string;
-  playerName: string;
+  player_id: string;
   amount: number;
   event: string;
   portals: number;
   date: string;
-  createdBy: string;
+  created_by: string;
   notes?: string;
 }
 
@@ -37,6 +38,9 @@ const DonationModal = ({ open, onClose, onSave, donation, editMode = false }: Do
     notes: ""
   });
 
+  const [players, setPlayers] = useState<any[]>([]);
+  const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
+
   const events = [
     "Citadel Upgrade",
     "Boss Event", 
@@ -51,14 +55,17 @@ const DonationModal = ({ open, onClose, onSave, donation, editMode = false }: Do
   useEffect(() => {
     if (donation && editMode) {
       setFormData({
-        playerName: donation.playerName,
+        playerName: '', // não usado mais
         amount: donation.amount.toString(),
         event: donation.event,
         portals: donation.portals.toString(),
         date: donation.date,
-        createdBy: donation.createdBy,
+        createdBy: donation.created_by,
         notes: donation.notes || ""
       });
+      // Find the player by ID for editing
+      const player = players.find(p => p.id === donation.player_id);
+      setSelectedPlayer(player || null);
     } else {
       setFormData({
         playerName: "",
@@ -69,23 +76,56 @@ const DonationModal = ({ open, onClose, onSave, donation, editMode = false }: Do
         createdBy: "Admin",
         notes: ""
       });
+      setSelectedPlayer(null);
     }
   }, [donation, editMode, open]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    const fetchPlayers = async () => {
+      const { data, error } = await supabase
+        .from('players')
+        .select('id, username, display_name, clan_name')
+        .eq('is_active', true)
+        .order('username');
+      if (!error && data) setPlayers(data);
+    };
+    fetchPlayers();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedPlayer) {
+      alert('Selecione um jogador válido.');
+      return;
+    }
     
     const donationData = {
-      playerName: formData.playerName,
+      player_id: selectedPlayer.id,
       amount: parseInt(formData.amount),
       event: formData.event,
       portals: parseInt(formData.portals),
       date: formData.date,
-      createdBy: formData.createdBy,
+      created_by: formData.createdBy,
       notes: formData.notes
     };
 
-    onSave(donationData);
+    // Salvar no Supabase
+    const { error } = await supabase.from('donations').insert([
+      {
+        amount: donationData.amount,
+        created_by: donationData.created_by,
+        description: donationData.notes,
+        donation_type: 'gp', // ou outro tipo se necessário
+        item_name: null,
+        player_id: donationData.player_id,
+        // Adicionar outros campos conforme necessário
+      }
+    ]);
+    if (!error) {
+      onSave(donationData);
+    } else {
+      alert('Erro ao salvar doação: ' + error.message);
+    }
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -121,17 +161,24 @@ const DonationModal = ({ open, onClose, onSave, donation, editMode = false }: Do
           {/* Player Name */}
           <div className="space-y-2">
             <Label htmlFor="playerName">Nome do Jogador</Label>
-            <div className="relative">
-              <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="playerName"
-                placeholder="Nome do jogador"
-                value={formData.playerName}
-                onChange={(e) => handleInputChange("playerName", e.target.value)}
-                className="pl-10"
-                required
-              />
-            </div>
+            <select
+              id="playerName"
+              value={selectedPlayer ? selectedPlayer.id : ""}
+              onChange={e => {
+                const player = players.find(p => p.id === e.target.value);
+                setSelectedPlayer(player || null);
+                handleInputChange("playerName", player ? player.display_name || player.username : "");
+              }}
+              className="w-full p-2 border rounded"
+              required
+            >
+              <option value="">Selecione um jogador</option>
+              {players.map(player => (
+                <option key={player.id} value={player.id}>
+                  {player.display_name || player.username} {player.clan_name ? `(${player.clan_name})` : ""}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Amount */}
@@ -230,16 +277,14 @@ const DonationModal = ({ open, onClose, onSave, donation, editMode = false }: Do
           <div className="flex space-x-3 pt-4">
             <Button
               type="button"
-              variant="outline"
+              className="flex-1 btn-outline"
               onClick={onClose}
-              className="flex-1"
             >
               Cancelar
             </Button>
             <Button
               type="submit"
-              variant="runescape"
-              className="flex-1"
+              className="flex-1 btn-runescape"
             >
               {editMode ? "Atualizar" : "Salvar"} Doação
             </Button>

@@ -1,6 +1,8 @@
 import { Clock, User, Crown, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface RecentPlayer {
   name: string;
@@ -12,40 +14,33 @@ interface RecentPlayer {
 }
 
 const RecentPlayers = () => {
-  const recentPlayers: RecentPlayer[] = [
-    {
-      name: "AtlantisLord",
-      clan: "Atlantis",
-      combat: 138,
-      totalLevel: 2736,
-      searchedAt: "há 2 minutos",
-      isOnline: true
-    },
-    {
-      name: "ArgusKnight",
-      clan: "Atlantis Argus",
-      combat: 124,
-      totalLevel: 2451,
-      searchedAt: "há 15 minutos",
-      isOnline: false
-    },
-    {
-      name: "SeaWarrior",
-      clan: "Atlantis",
-      combat: 140,
-      totalLevel: 2890,
-      searchedAt: "há 1 hora",
-      isOnline: true
-    },
-    {
-      name: "OceanMage",
-      clan: "Atlantis Argus",
-      combat: 119,
-      totalLevel: 2234,
-      searchedAt: "há 3 horas",
-      isOnline: false
-    }
-  ];
+  const [recentPlayers, setRecentPlayers] = useState<RecentPlayer[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchRecentPlayers = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('players')
+        .select('username, clan_name, combat_level, total_level, is_active, updated_at')
+        .order('updated_at', { ascending: false })
+        .limit(4);
+      if (!error && data) {
+        setRecentPlayers(
+          data.map((p: any) => ({
+            name: p.username,
+            clan: p.clan_name || '',
+            combat: p.combat_level || 0,
+            totalLevel: p.total_level || 0,
+            searchedAt: p.updated_at ? new Date(p.updated_at).toLocaleString('pt-BR') : '',
+            isOnline: p.is_active || false
+          }))
+        );
+      }
+      setLoading(false);
+    };
+    fetchRecentPlayers();
+  }, []);
 
   return (
     <Card className="clan-card">
@@ -60,7 +55,11 @@ const RecentPlayers = () => {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {recentPlayers.map((player) => (
+          {loading ? (
+            <div className="text-center text-muted-foreground">Carregando jogadores recentes...</div>
+          ) : recentPlayers.length === 0 ? (
+            <div className="text-center text-muted-foreground">Nenhum jogador recente encontrado.</div>
+          ) : recentPlayers.map((player) => (
             <div
               key={player.name}
               className="flex items-center justify-between p-4 border border-border rounded-lg hover:border-runescape-gold/50 transition-colors"
@@ -72,7 +71,6 @@ const RecentPlayers = () => {
                     <div className="absolute -top-1 -right-1 h-3 w-3 bg-green-500 rounded-full border-2 border-background"></div>
                   )}
                 </div>
-                
                 <div className="space-y-1">
                   <div className="font-medium flex items-center space-x-2">
                     <span className="text-foreground">{player.name}</span>
@@ -88,7 +86,6 @@ const RecentPlayers = () => {
                   </div>
                 </div>
               </div>
-              
               <div className="flex space-x-2">
                 <Button variant="ghost" size="sm">
                   <TrendingUp className="h-4 w-4" />
@@ -100,7 +97,6 @@ const RecentPlayers = () => {
             </div>
           ))}
         </div>
-        
         <div className="mt-6 text-center">
           <Button variant="outline" className="w-full">
             Ver Histórico Completo
