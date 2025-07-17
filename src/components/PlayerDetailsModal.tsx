@@ -38,6 +38,7 @@ interface PlayerStats {
 }
 
 const PlayerDetailsModal = ({ player, open, onClose }: PlayerDetailsModalProps) => {
+  if (!player) return null;
   const [playerStats, setPlayerStats] = useState<PlayerStats | null>(null);
   const [loading, setLoading] = useState(false);
 
