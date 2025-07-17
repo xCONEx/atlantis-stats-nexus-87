@@ -99,7 +99,9 @@ const Donations = () => {
                     <Card
                       key={player.player_id || player.player_name}
                       className="shadow-md hover:shadow-lg transition cursor-pointer"
-                      onClick={() => setSelectedPlayer({ player_id: player.player_id, player_name: player.player_name })}
+                      onClick={() => {
+                        if (player.player_id) setSelectedPlayer({ player_id: player.player_id, player_name: player.player_name });
+                      }}
                     >
                       <CardHeader>
                         <CardTitle className="truncate">{player.player_name}</CardTitle>
@@ -126,7 +128,7 @@ const Donations = () => {
         onSave={() => setShowDonationModal(false)}
       />
       {/* Modal de detalhes das doações do jogador */}
-      {selectedPlayer && (
+      {selectedPlayer && selectedPlayer.player_id && (
         <PlayerDonationsModal
           player_id={selectedPlayer.player_id}
           player_name={selectedPlayer.player_name}
