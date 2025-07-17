@@ -51,12 +51,20 @@ const PlayerDetailsModal = ({ player, open, onClose }: PlayerDetailsModalProps) 
   const fetchPlayerStats = async () => {
     setLoading(true);
     try {
-      const info = await runescapeApi.getPlayerInfo(player.name);
-      // Adaptar estrutura para PlayerStats local
+      const hiscores = await runescapeApi.getPlayerHiscores(player.name);
       setPlayerStats({
-        skills: info.skills || {},
-        bosses: info.bosses || {},
-        minigames: info.minigames || {}
+        skills: Object.fromEntries(
+          Object.entries(hiscores).map(([skill, data]) => [
+            skill,
+            {
+              level: data.level,
+              xp: data.experience,
+              rank: data.rank
+            }
+          ])
+        ),
+        bosses: {},
+        minigames: {}
       });
     } catch (error) {
       console.error("Erro ao buscar stats do jogador:", error);
