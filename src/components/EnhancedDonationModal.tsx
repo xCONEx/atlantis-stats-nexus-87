@@ -172,15 +172,22 @@ const EnhancedDonationModal = ({ open, onClose, onSave, donation, editMode = fal
       const totalAfter = donationsAfter ? donationsAfter.reduce((acc, d) => acc + (d.amount || 0), 0) : 0;
       const cargoDepois = calcularCargo(totalAfter);
 
+      // Log para depuração
+      console.log('cargoAntes:', cargoAntes, 'cargoDepois:', cargoDepois);
+
       // Atualizar cargo no Discord (centralizado)
       if (cargoAntes !== cargoDepois) {
         try {
+          console.log('Chamando atualizarRoleDiscord', selectedPlayer.id);
           await atualizarRoleDiscord(selectedPlayer.id);
+          console.log('Chamada para atualizarRoleDiscord concluída');
           toast({ title: 'Cargo do Discord atualizado!', description: `Novo cargo: ${cargoDepois}` });
         } catch (err) {
           console.error('Erro ao atualizar cargo no Discord:', err.response?.data || err.message);
           toast({ title: 'Erro ao atualizar cargo no Discord', description: err.response?.data?.error || err.message, variant: 'destructive' });
         }
+      } else {
+        toast({ title: 'Cargo do Discord não mudou', description: 'Nenhuma atualização necessária.' });
       }
 
       toast({
@@ -454,6 +461,11 @@ const EnhancedDonationModal = ({ open, onClose, onSave, donation, editMode = fal
             </Button>
           </div>
         </form>
+        {donation && (
+          <div className="text-xs text-muted-foreground mt-4">
+            Adicionado por: {donation.created_by_email ? donation.created_by_email : (donation.created_by || 'Desconhecido')}
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
