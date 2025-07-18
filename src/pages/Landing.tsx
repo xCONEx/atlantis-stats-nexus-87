@@ -1,4 +1,4 @@
-import { Zap, Shield, Users, TrendingUp, Search, Target, Award, ChevronRight } from "lucide-react";
+import { Zap, Shield, Users, TrendingUp, Search, Target, Award, ChevronRight, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
@@ -120,10 +120,10 @@ const Landing = () => {
                 <ChevronRight className="h-5 w-5" />
               </Button>
             </Link>
-            <Link to="/dashboard">
+            <Link to="/ranking">
               <Button className="btn-medieval w-full sm:w-auto text-xl py-4 px-8">
-                <TrendingUp className="h-5 w-5" />
-                Ver Demo
+                <Trophy className="h-5 w-5" />
+                Ranking de Doações
               </Button>
             </Link>
           </div>
