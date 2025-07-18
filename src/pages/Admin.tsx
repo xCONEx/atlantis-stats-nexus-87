@@ -69,52 +69,22 @@ const AdminPage = () => {
   const fetchUsers = async () => {
     setFetching(true);
     try {
-      // Tentar buscar com user_profiles primeiro
+      // Buscar apenas user_roles
       let { data: userRoles, error: userRolesError } = await supabase
         .from('user_roles')
-        .select(`
-          user_id, 
-          role, 
-          clan_name,
-          user_profiles!user_id(email, display_name)
-        `)
+        .select('user_id, role, clan_name')
         .order('role', { ascending: false });
       
       if (userRolesError) {
-        console.log('user_profiles não disponível, usando fallback:', userRolesError);
-        // Fallback: buscar apenas user_roles
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('user_roles')
-          .select('user_id, role, clan_name')
-          .order('role', { ascending: false });
-        
-        if (fallbackError) {
-          console.error('Erro ao buscar user_roles:', fallbackError);
-          setUsers([]);
-          setFetching(false);
-          return;
-        }
-        
-        userRoles = fallbackData;
+        console.error('Erro ao buscar user_roles:', userRolesError);
+        setUsers([]);
+        setFetching(false);
+        return;
       }
 
       // Processar dados dos usuários
       const usersWithDetails = userRoles.map((userRole) => {
-        // Se temos dados de user_profiles
-        if (userRole.user_profiles) {
-          const profile = userRole.user_profiles;
-          const displayName = profile?.display_name || 
-                             profile?.email || 
-                             `Usuário ${userRole.user_id.slice(0, 8)}...`;
-
-          return {
-            ...userRole,
-            displayName,
-            email: profile?.email || null
-          };
-        }
-        
-        // Fallback: se for o usuário atual, usar dados do contexto
+        // Se for o usuário atual, usar dados do contexto
         const isCurrentUser = user && user.id === userRole.user_id;
         
         if (isCurrentUser) {
