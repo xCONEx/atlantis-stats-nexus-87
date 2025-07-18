@@ -212,7 +212,12 @@ const AdminPage = () => {
     <div className="max-w-5xl mx-auto mt-10 p-6 bg-gradient-to-br from-[#181c24] to-[#23283a] rounded-xl shadow-lg border border-runescape-gold/30">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold text-runescape-gold">Painel de Administração do Sistema</h1>
-        <Button variant="outline" onClick={signOut}>Sair</Button>
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={() => window.location.href = '/dashboard'}>
+            Dashboard
+          </Button>
+          <Button variant="outline" onClick={signOut}>Sair</Button>
+        </div>
       </div>
       <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <Input
