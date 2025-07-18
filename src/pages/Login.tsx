@@ -79,7 +79,7 @@ const Login = () => {
               className="w-full flex items-center justify-center gap-2"
               onClick={signInWithDiscord}
             >
-              <DiscordIcon className="h-6 w-6" />
+              <img src="/disclogo.png" alt="Discord" className="h-6 w-6 mr-2" />
               Entrar com Discord
             </Button>
           </CardContent>
