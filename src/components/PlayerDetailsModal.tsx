@@ -219,54 +219,17 @@ const PlayerDetailsModal = ({ player, open, onClose }: PlayerDetailsModalProps) 
               </div>
               {playerStats && (
                 <>
-                  {/* Combat Skills */}
-                  <Card className="clan-card">
-                    <CardHeader>
-                      <CardTitle className="flex items-center space-x-2 text-runescape-gold">
-                        <Sword className="h-5 w-5" />
-                        <span>Habilidades de Combate</span>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4">
-                        {getCombatSkills().map((skill) => {
-                          const data = playerStats.skills[skill];
-                          return (
-                            <div key={skill} className="medieval-border p-4 text-center flex flex-col items-center">
-                              <div className="flex items-center justify-center mb-1">
-                                <img
-                                  src={getSkillIcon(skill)}
-                                  alt={skill}
-                                  className="w-7 h-7 mr-2"
-                                  onError={e => (e.currentTarget.src = '/skills/default.png')}
-                                />
-                                <span className="font-medium text-runescape-gold">{skill}</span>
-                              </div>
-                              <div className="text-2xl font-bold mb-1">{data ? data.level : '-'}</div>
-                              <div className="text-sm text-muted-foreground mb-1">
-                                {data ? formatXp(data.xp) : '0'} XP
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                Rank: {data ? formatNumber(data.rank) : '0'}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </CardContent>
-                  </Card>
-
                   {/* Non-Combat Skills */}
                   <Card className="clan-card">
                     <CardHeader>
                       <CardTitle className="flex items-center space-x-2 text-runescape-gold">
                         <Target className="h-5 w-5" />
-                        <span>Outras Habilidades</span>
+                        <span>Habilidades</span>
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4">
-                        {getNonCombatSkills().map((skill) => {
+                        {Object.keys(playerStats.skills).map((skill) => {
                           const data = playerStats.skills[skill];
                           return (
                             <div key={skill} className="medieval-border p-4 text-center flex flex-col items-center">
