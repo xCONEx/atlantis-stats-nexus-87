@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import axios from 'axios';
+import { useToast } from "@/components/ui/use-toast";
 
 interface Donation {
   id: string;
@@ -71,6 +73,7 @@ const DonationModal = ({ open, onClose, onSave, donation, editMode = false }: Do
 
   const [players, setPlayers] = useState<any[]>([]);
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
+  const { toast } = useToast();
 
   const events = [
     "Citadel Upgrade",
@@ -106,8 +109,74 @@ const DonationModal = ({ open, onClose, onSave, donation, editMode = false }: Do
     fetchPlayers();
   }, []);
 
+  const calcularCargo = (total) => {
+    if (total >= 5000000000) return 'Personalizado 👑';
+    if (total >= 2500000000) return 'Filantropo 🪙';
+    if (total >= 1000000000) return 'Bilionário 💷';
+    if (total >= 500000000) return 'Milionário 💵';
+    if (total >= 250000000) return 'Generoso 💰';
+    return 'Membro';
+  };
+
+  const atualizarRoleDiscord = async (playerId) => {
+    // Buscar Discord ID associado
+    const { data: link } = await supabase
+      .from('discord_links')
+      .select('discord_id')
+      .eq('player_id', playerId)
+      .single();
+    if (!link || !link.discord_id) return;
+    // Buscar total de doações
+    const { data: donations } = await supabase
+      .from('donations')
+      .select('amount')
+      .eq('player_id', playerId);
+    const total = donations ? donations.reduce((acc, d) => acc + (d.amount || 0), 0) : 0;
+    const cargo = calcularCargo(total);
+    try {
+      await axios.post('https://atlantisstatus.vercel.app/api/discord-roles', {
+        discord_id: link.discord_id,
+        action: 'update_role'
+      });
+      toast({ title: 'Cargo do Discord atualizado!', description: `Novo cargo: ${cargo}` });
+    } catch (err) {
+      console.error('Erro ao atualizar cargo no Discord:', err.response?.data || err.message);
+      toast({ title: 'Erro ao atualizar cargo no Discord', description: err.response?.data?.error || err.message, variant: 'destructive' });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('handleSubmit chamado', { selectedPlayer, formData });
+    
+    if (!selectedPlayer) {
+      toast({
+        title: "Erro",
+        description: "Selecione um jogador",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!formData.amount || parseInt(formData.amount) <= 0) {
+      toast({
+        title: "Erro",
+        description: "O valor deve ser maior que zero",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Buscar total antes da alteração
+    const { data: donationsBefore } = await supabase
+      .from('donations')
+      .select('amount')
+      .eq('player_id', selectedPlayer.id);
+    console.log('donationsBefore', donationsBefore);
+    const totalBefore = donationsBefore ? donationsBefore.reduce((acc, d) => acc + (d.amount || 0), 0) : 0;
+    const cargoAntes = calcularCargo(totalBefore);
+    console.log('cargoAntes', cargoAntes);
+
     const donationData = {
       player_id: selectedPlayer ? selectedPlayer.id : null,
       player_name: formData.playerName || (selectedPlayer ? selectedPlayer.username : ""),
@@ -136,6 +205,21 @@ const DonationModal = ({ open, onClose, onSave, donation, editMode = false }: Do
       }
     ]);
     if (!error) {
+      // Buscar total depois da alteração
+      const { data: donationsAfter } = await supabase
+        .from('donations')
+        .select('amount')
+        .eq('player_id', selectedPlayer.id);
+      console.log('donationsAfter', donationsAfter);
+      const totalAfter = donationsAfter ? donationsAfter.reduce((acc, d) => acc + (d.amount || 0), 0) : 0;
+      const cargoDepois = calcularCargo(totalAfter);
+      console.log('cargoDepois', cargoDepois);
+      console.log('Comparando cargos:', cargoAntes, cargoDepois);
+      if (cargoAntes !== cargoDepois) {
+        await atualizarRoleDiscord(selectedPlayer.id);
+      } else {
+        toast({ title: 'Cargo do Discord não mudou', description: 'Nenhuma atualização necessária.' });
+      }
       onSave(donationData);
     } else {
       alert('Erro ao salvar doação: ' + error.message);
