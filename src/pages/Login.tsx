@@ -44,7 +44,7 @@ const Login = () => {
         {/* Header */}
         <div className="text-center space-y-4">
           <Link to="/" className="inline-flex items-center space-x-3">
-            <img src="/icon/2logo.svg" alt="Logo Atlantis" className="h-10 w-10 animate-glow-pulse" />
+            <img src="/2logo.svg" alt="Logo Atlantis" className="h-10 w-10 animate-glow-pulse" />
             <div>
               <h1 className="text-3xl font-cinzel font-bold text-runescape-gold">
                 Atlantis Stats
