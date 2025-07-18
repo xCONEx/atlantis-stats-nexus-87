@@ -1,359 +1,139 @@
-import { useState, useEffect } from "react";
-import { X, Zap, Sword, Shield, Target, Award, TrendingUp, Clock } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
-import { runescapeApi } from "@/services/runescapeApi";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 
-interface Player {
-  name: string;
-  clan: string;
-  combat: number;
-  totalLevel: number;
-  totalXp: number;
-  lastSeen: string;
-  isOnline: boolean;
-  rank: string;
-  joined: string;
-}
-
-interface PlayerDetailsModalProps {
-  player: Player;
+interface PlayerDonationsModalProps {
+  player_id: string;
+  player_name: string;
   open: boolean;
   onClose: () => void;
 }
 
-interface PlayerStats {
-  skills: {
-    [key: string]: { level: number; xp: number; rank: number };
-  };
-  bosses: {
-    [key: string]: { kills: number; rank: number };
-  };
-  minigames: {
-    [key: string]: { score: number; rank: number };
-  };
+interface DonationDetail {
+  id: string;
+  amount: number;
+  created_at: string;
+  created_by?: string;
+  created_by_email?: string;
 }
 
-const PlayerDetailsModal = ({ player, open, onClose }: PlayerDetailsModalProps) => {
-  if (!player) return null;
-  const [playerStats, setPlayerStats] = useState<PlayerStats | null>(null);
+function cleanPlayerName(name: string) {
+  if (!name) return '';
+  return name.normalize('NFC').replace(/[^\p{L}\p{N}\s\-_'!@#$%^&*()+=,.?]/gu, '');
+}
+
+function formatGpWithColor(value: number) {
+  let display = value.toLocaleString('pt-BR');
+  let color = 'text-yellow-300';
+  if (value >= 1_000_000_000_000_000) {
+    display = (value / 1_000_000_000_000_000).toFixed(3).replace(/\.000$/, '') + 'Q';
+    color = 'text-orange-400';
+  } else if (value >= 1_000_000_000_000) {
+    display = (value / 1_000_000_000_000).toFixed(3).replace(/\.000$/, '') + 'T';
+    color = 'text-purple-400';
+  } else if (value >= 1_000_000_000) {
+    display = (value / 1_000_000_000).toFixed(3).replace(/\.000$/, '') + 'B';
+    color = 'text-blue-400';
+  } else if (value >= 10_000_000) {
+    display = (value / 1_000_000).toFixed(3).replace(/\.000$/, '') + 'M';
+    color = 'text-green-400';
+  } else if (value >= 100_000) {
+    display = (value / 1_000).toFixed(3).replace(/\.000$/, '') + 'K';
+    color = 'text-white';
+  }
+  return { display, color };
+}
+
+const PlayerDonationsModal = ({ player_id, player_name, open, onClose }: PlayerDonationsModalProps) => {
+  const [donations, setDonations] = useState<DonationDetail[]>([]);
   const [loading, setLoading] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const { userRole } = useAuth();
+  const { toast } = useToast();
 
-  // Remover mockStats e usar API real
   useEffect(() => {
-    if (open && player) {
-      fetchPlayerStats();
-    }
-  }, [open, player]);
-
-  const fetchPlayerStats = async () => {
-    setLoading(true);
-    try {
-      const hiscores = await runescapeApi.getPlayerHiscores(player.name);
-      setPlayerStats({
-        skills: Object.fromEntries(
-          Object.entries(hiscores).map(([skill, data]) => [
-            skill,
-            {
-              level: data.level,
-              xp: data.experience,
-              rank: data.rank
-            }
-          ])
-        ),
-        bosses: {},
-        minigames: {}
-      });
-    } catch (error) {
-      console.error("Erro ao buscar stats do jogador:", error);
-      setPlayerStats(null);
-    } finally {
+    if (!open || !player_id) return;
+    const fetchDonations = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('donations')
+        .select('id, amount, created_at, created_by')
+        .eq('player_id', player_id)
+        .order('created_at', { ascending: false });
+      if (!error && data) setDonations(data);
       setLoading(false);
+    };
+    fetchDonations();
+  }, [open, player_id]);
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    setDeleting(true);
+    const { error } = await supabase.from('donations').delete().eq('id', deleteId);
+    if (!error) {
+      setDonations((prev) => prev.filter((d) => d.id !== deleteId));
+      toast({ title: 'Doação removida', description: 'A doação foi excluída com sucesso.', variant: 'default' });
+    } else {
+      toast({ title: 'Erro ao remover', description: error.message, variant: 'destructive' });
     }
-  };
-
-  const formatNumber = (num: number) => {
-    return num.toLocaleString('pt-BR');
-  };
-
-  const formatXp = (xp: number) => {
-    if (xp >= 1000000) {
-      return `${(xp / 1000000).toFixed(1)}M`;
-    }
-    if (xp >= 1000) {
-      return `${(xp / 1000).toFixed(1)}K`;
-    }
-    return xp.toString();
-  };
-
-  const getCombatSkills = () => {
-    if (!playerStats) return [];
-    return ["Attack", "Defence", "Strength", "Constitution", "Ranged", "Prayer", "Magic"];
-  };
-
-  const getNonCombatSkills = () => {
-    if (!playerStats) return [];
-    const combatSkills = getCombatSkills();
-    return Object.keys(playerStats.skills).filter(skill => !combatSkills.includes(skill));
-  };
-
-  // Remover o mapeamento antigo de SKILL_IMAGES e criar um novo baseado em imports dinâmicos locais
-
-  // Função utilitária para obter o caminho do ícone local (agora em /public/skills)
-  const getSkillIcon = (skill: string) => {
-    return `/skills/${skill}.png`;
+    setDeleting(false);
+    setDeleteId(null);
   };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="flex items-center space-x-3 text-runescape-gold">
-            <Zap className="h-6 w-6" />
-            <span>{player.name}</span>
-            <div className="flex items-center space-x-2 text-sm bg-runescape-gold/20 px-3 py-1 rounded-full">
-              <Sword className="h-4 w-4" />
-              <span>Combat: {player.combat}</span>
-            </div>
-          </DialogTitle>
+          <DialogTitle className="text-runescape-gold">Doações de {cleanPlayerName(player_name)}</DialogTitle>
         </DialogHeader>
-
-        {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="text-center space-y-4">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-runescape-gold mx-auto"></div>
-              <p className="text-muted-foreground">Carregando estatísticas...</p>
+        <div className="space-y-4">
+          {loading ? (
+            <p className="text-muted-foreground">Carregando doações...</p>
+          ) : donations.length === 0 ? (
+            <p className="text-muted-foreground">Nenhuma doação encontrada.</p>
+          ) : (
+            <div className="space-y-2">
+              {donations.map((donation) => (
+                <Card key={donation.id} className="border border-border">
+                  <CardHeader className="flex flex-row justify-between items-center p-3 pb-0">
+                    <CardTitle className={`text-base font-medium ${formatGpWithColor(donation.amount).color}`}>{formatGpWithColor(donation.amount).display} GP</CardTitle>
+                    <span className="text-xs text-muted-foreground">{donation.created_at ? new Date(donation.created_at).toLocaleDateString('pt-BR') : ''}</span>
+                  </CardHeader>
+                  <CardContent className="p-3 pt-0 flex flex-row justify-between items-center">
+                    <span className="text-xs text-muted-foreground">Adicionado por: {donation.created_by || 'Desconhecido'}</span>
+                    {userRole === 'admin' && (
+                      <Button variant="destructive" size="sm" onClick={() => setDeleteId(donation.id)} disabled={deleting}>
+                        Remover
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
             </div>
-          </div>
-        ) : (
-          <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-              <TabsTrigger value="skills">Habilidades</TabsTrigger>
-              <TabsTrigger value="bosses">Bosses</TabsTrigger>
-              <TabsTrigger value="minigames">Minigames</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="overview" className="space-y-6">
-              {/* Player Info */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card className="clan-card">
-                  <CardContent className="p-6 text-center">
-                    <div className="text-3xl font-bold text-runescape-gold mb-2">
-                      {player.totalLevel}
-                    </div>
-                    <div className="text-sm text-muted-foreground">Nível Total</div>
-                  </CardContent>
-                </Card>
-                
-                <Card className="clan-card">
-                  <CardContent className="p-6 text-center">
-                    <div className="text-3xl font-bold text-runescape-blue mb-2">
-                      {formatXp(player.totalXp)}
-                    </div>
-                    <div className="text-sm text-muted-foreground">XP Total</div>
-                  </CardContent>
-                </Card>
-                
-                <Card className="clan-card">
-                  <CardContent className="p-6 text-center">
-                    <div className="text-3xl font-bold text-green-400 mb-2">
-                      {player.combat}
-                    </div>
-                    <div className="text-sm text-muted-foreground">Nível de Combate</div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Player Details */}
-              <Card className="clan-card">
-                <CardHeader>
-                  <CardTitle className="text-runescape-gold">Informações do Jogador</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Clã:</span>
-                        <span className="font-medium">{player.clan}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Cargo:</span>
-                        <span className="font-medium text-runescape-gold">{player.rank}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Membro desde:</span>
-                        <span className="font-medium">{new Date(player.joined).toLocaleDateString('pt-BR')}</span>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Status:</span>
-                        <div className="flex items-center space-x-2">
-                          <div className={`w-2 h-2 rounded-full ${
-                            player.isOnline ? "bg-green-400" : "bg-gray-400"
-                          }`} />
-                          <span className="font-medium">
-                            {player.isOnline ? "Online" : "Offline"}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Última vez visto:</span>
-                        <span className="font-medium">{player.lastSeen}</span>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="skills" className="space-y-6">
-              <div className="flex justify-end mb-2">
-                <Button variant="outline" size="sm" onClick={fetchPlayerStats} disabled={loading}>
-                  {loading ? "Atualizando..." : "Atualizar Skills"}
-                </Button>
-              </div>
-              {playerStats && (
-                <>
-                  {/* Combat Skills */}
-                  <Card className="clan-card">
-                    <CardHeader>
-                      <CardTitle className="flex items-center space-x-2 text-runescape-gold">
-                        <Sword className="h-5 w-5" />
-                        <span>Habilidades de Combate</span>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4">
-                        {getCombatSkills().map((skill) => {
-                          const data = playerStats.skills[skill];
-                          return (
-                            <div key={skill} className="medieval-border p-4 text-center flex flex-col items-center">
-                              <div className="flex items-center justify-center mb-1">
-                                <img
-                                  src={getSkillIcon(skill)}
-                                  alt={skill}
-                                  className="w-7 h-7 mr-2"
-                                  onError={e => (e.currentTarget.src = `https://secure.runescape.com/m=rs3_static/images/skills/${skill.toLowerCase()}.png`)}
-                                />
-                                <span className="font-medium text-runescape-gold">{skill}</span>
-                              </div>
-                              <div className="text-2xl font-bold mb-1">{data ? data.level : '-'}</div>
-                              <div className="text-sm text-muted-foreground mb-1">
-                                {data ? formatXp(data.xp) : '0'} XP
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                Rank: {data ? formatNumber(data.rank) : '0'}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Non-Combat Skills */}
-                  <Card className="clan-card">
-                    <CardHeader>
-                      <CardTitle className="flex items-center space-x-2 text-runescape-gold">
-                        <Target className="h-5 w-5" />
-                        <span>Outras Habilidades</span>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4">
-                        {getNonCombatSkills().map((skill) => {
-                          const data = playerStats.skills[skill];
-                          return (
-                            <div key={skill} className="medieval-border p-4 text-center flex flex-col items-center">
-                              <div className="flex items-center justify-center mb-1">
-                                <img
-                                  src={getSkillIcon(skill)}
-                                  alt={skill}
-                                  className="w-7 h-7 mr-2"
-                                  onError={e => (e.currentTarget.src = `https://secure.runescape.com/m=rs3_static/images/skills/${skill.toLowerCase()}.png`)}
-                                />
-                                <span className="font-medium text-runescape-gold">{skill}</span>
-                              </div>
-                              <div className="text-2xl font-bold mb-1">{data ? data.level : '-'}</div>
-                              <div className="text-sm text-muted-foreground mb-1">
-                                {data ? formatXp(data.xp) : '0'} XP
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                Rank: {data ? formatNumber(data.rank) : '0'}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </>
-              )}
-            </TabsContent>
-
-            <TabsContent value="bosses" className="space-y-6">
-              {playerStats && (
-                <Card className="clan-card">
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2 text-runescape-gold">
-                      <Shield className="h-5 w-5" />
-                      <span>Boss Kills</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                      {Object.entries(playerStats.bosses).map(([boss, data]) => (
-                        <div key={boss} className="medieval-border p-4 text-center">
-                          <div className="font-medium text-runescape-gold mb-1">{boss}</div>
-                          <div className="text-2xl font-bold mb-1">{formatNumber(data.kills)}</div>
-                          <div className="text-sm text-muted-foreground">Kills</div>
-                          <div className="text-xs text-muted-foreground">
-                            Rank: {formatNumber(data.rank)}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
-
-            <TabsContent value="minigames" className="space-y-6">
-              {playerStats && (
-                <Card className="clan-card">
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2 text-runescape-gold">
-                      <Award className="h-5 w-5" />
-                      <span>Minigames</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {Object.entries(playerStats.minigames).map(([minigame, data]) => (
-                        <div key={minigame} className="medieval-border p-4 text-center">
-                          <div className="font-medium text-runescape-gold mb-1">{minigame}</div>
-                          <div className="text-2xl font-bold mb-1">{formatNumber(data.score)}</div>
-                          <div className="text-sm text-muted-foreground">Score</div>
-                          <div className="text-xs text-muted-foreground">
-                            Rank: {formatNumber(data.rank)}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
-          </Tabs>
-        )}
+          )}
+        </div>
       </DialogContent>
+      {/* Modal de confirmação de exclusão */}
+      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar remoção</AlertDialogTitle>
+          </AlertDialogHeader>
+          <div>Tem certeza que deseja remover esta doação? Esta ação não pode ser desfeita.</div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting} onClick={() => setDeleteId(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction disabled={deleting} onClick={handleDelete}>Remover</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 };
 
-export default PlayerDetailsModal;
+export default PlayerDonationsModal; 
