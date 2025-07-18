@@ -141,43 +141,49 @@ const EnhancedDonationModal = ({ open, onClose, onSave, donation, editMode = fal
         description: formData.description || null
       };
 
+      let supabaseResult;
       if (editMode && donation) {
-        const { error } = await supabase
+        supabaseResult = await supabase
           .from('donations')
           .update(donationData)
           .eq('id', donation.id);
-
-        if (error) throw error;
-
-        toast({
-          title: "Sucesso",
-          description: "Doação atualizada com sucesso"
-        });
-        // Hook: atualizar role
-        await atualizarRoleDiscord(selectedPlayer.id);
       } else {
-        const { error } = await supabase
+        supabaseResult = await supabase
           .from('donations')
           .insert([donationData]);
+      }
+      const { error } = supabaseResult;
+      if (error) throw error;
 
-        if (error) throw error;
-
-        toast({
-          title: "Sucesso",
-          description: "Doação registrada com sucesso"
-        });
-        // Hook: atualizar role
-        await atualizarRoleDiscord(selectedPlayer.id);
+      // Buscar discord_id do usuário
+      const { data: link } = await supabase
+        .from('discord_links')
+        .select('discord_id')
+        .eq('player_id', selectedPlayer.id)
+        .single();
+      if (link && link.discord_id) {
+        // Chamar endpoint para atualizar cargo
+        try {
+          await axios.post('/api/discord-roles', {
+            discord_id: link.discord_id,
+            action: 'update_role'
+          });
+        } catch (err) {
+          console.error('Erro ao atualizar cargo no Discord:', err.response?.data || err.message);
+        }
       }
 
+      toast({
+        title: 'Sucesso',
+        description: editMode ? 'Doação atualizada com sucesso' : 'Doação registrada com sucesso'
+      });
       onSave();
       onClose();
     } catch (error) {
       console.error('Error saving donation:', error);
       toast({
-        title: "Erro",
-        description: "Erro ao salvar doação",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Erro ao salvar doação',
       });
     } finally {
       setLoading(false);
