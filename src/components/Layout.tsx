@@ -161,6 +161,21 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                 </Button>
               </Link>
             )}
+            {hasRolePermission(userRole, ['admin', 'leader']) && (
+              <Link to="/admin">
+                <Button 
+                  variant="ghost" 
+                  className={`rounded-none border-b-2 ${
+                    location.pathname === '/admin' 
+                      ? 'border-runescape-gold' 
+                      : 'border-transparent hover:border-runescape-gold'
+                  }`}
+                >
+                  <Shield className="h-4 w-4" />
+                  Painel Admin
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       </nav>
