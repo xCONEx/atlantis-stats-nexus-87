@@ -13,6 +13,7 @@ import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, A
 import { useMemo } from "react";
 import * as XLSX from "xlsx";
 import { useRef } from "react";
+import { hasRolePermission } from "@/lib/utils";
 
 interface PlayerDonationSummary {
   player_id: string;
@@ -238,10 +239,14 @@ const Donations = () => {
               onChange={e => setSearchTerm(e.target.value)}
               className="max-w-xs"
             />
-            <Button onClick={() => setShowDonationModal(true)} className="btn-runescape">
-              <Plus className="h-4 w-4" />
-              Nova Doação
-            </Button>
+            {hasRolePermission(userRole, [
+              'admin', 'administrator', 'leader', 'vice-leader', 'coordinator', 'fiscal', 'organizador'
+            ]) && (
+              <Button onClick={() => setShowDonationModal(true)} className="btn-runescape">
+                <Plus className="h-4 w-4" />
+                Nova Doação
+              </Button>
+            )}
           </div>
         </div>
 
@@ -326,19 +331,25 @@ const Donations = () => {
             -{(currentPage - 1) * PAGE_SIZE + playerDonations.length} de {totalPages * PAGE_SIZE}
           </div>
           <div className="flex gap-2 items-center">
-            <Button variant="outline" size="sm" onClick={handleExportExcel} disabled={loading}>
-              Exportar para Excel
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={loading}>
-              Importar Excel
-            </Button>
-            <input
-              type="file"
-              accept=".xlsx, .xls"
-              ref={fileInputRef}
-              style={{ display: 'none' }}
-              onChange={handleImportExcel}
-            />
+            {hasRolePermission(userRole, [
+              'admin', 'administrator', 'leader', 'vice-leader', 'coordinator', 'fiscal', 'organizador'
+            ]) && (
+              <>
+                <Button variant="outline" size="sm" onClick={handleExportExcel} disabled={loading}>
+                  Exportar para Excel
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={loading}>
+                  Importar Excel
+                </Button>
+                <input
+                  type="file"
+                  accept=".xlsx, .xls"
+                  ref={fileInputRef}
+                  style={{ display: 'none' }}
+                  onChange={handleImportExcel}
+                />
+              </>
+            )}
             <Button variant="outline" size="sm" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>« Primeira</Button>
             <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>‹ Anterior</Button>
             <span className="text-sm">Página {currentPage} de {totalPages}</span>
