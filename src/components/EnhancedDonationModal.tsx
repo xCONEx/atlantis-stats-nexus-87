@@ -112,6 +112,7 @@ const EnhancedDonationModal = ({ open, onClose, onSave, donation, editMode = fal
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('handleSubmit chamado', { selectedPlayer, formData });
     
     if (!selectedPlayer) {
       toast({
@@ -139,8 +140,10 @@ const EnhancedDonationModal = ({ open, onClose, onSave, donation, editMode = fal
         .from('donations')
         .select('amount')
         .eq('player_id', selectedPlayer.id);
+      console.log('donationsBefore', donationsBefore);
       const totalBefore = donationsBefore ? donationsBefore.reduce((acc, d) => acc + (d.amount || 0), 0) : 0;
       const cargoAntes = calcularCargo(totalBefore);
+      console.log('cargoAntes', cargoAntes);
 
       const donationData = {
         player_id: selectedPlayer.id,
@@ -156,10 +159,12 @@ const EnhancedDonationModal = ({ open, onClose, onSave, donation, editMode = fal
           .from('donations')
           .update(donationData)
           .eq('id', donation.id);
+        console.log('supabaseResult update', supabaseResult);
       } else {
         supabaseResult = await supabase
           .from('donations')
           .insert([donationData]);
+        console.log('supabaseResult insert', supabaseResult);
       }
       const { error } = supabaseResult;
       if (error) throw error;
@@ -169,11 +174,13 @@ const EnhancedDonationModal = ({ open, onClose, onSave, donation, editMode = fal
         .from('donations')
         .select('amount')
         .eq('player_id', selectedPlayer.id);
+      console.log('donationsAfter', donationsAfter);
       const totalAfter = donationsAfter ? donationsAfter.reduce((acc, d) => acc + (d.amount || 0), 0) : 0;
       const cargoDepois = calcularCargo(totalAfter);
+      console.log('cargoDepois', cargoDepois);
 
       // Log para depuração
-      console.log('cargoAntes:', cargoAntes, 'cargoDepois:', cargoDepois);
+      console.log('Comparando cargos:', cargoAntes, cargoDepois);
 
       // Atualizar cargo no Discord (centralizado)
       if (cargoAntes !== cargoDepois) {
