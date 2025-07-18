@@ -9,12 +9,13 @@ import { supabase } from "@/integrations/supabase/client";
 import PlayerDonationsModal from "@/components/PlayerDonationsModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter, AlertDialogCancel, AlertDialogAction, AlertDialogDescription } from "@/components/ui/alert-dialog";
 import { useMemo } from "react";
 import * as XLSX from "xlsx";
 import { useRef } from "react";
 import { hasRolePermission } from "@/lib/utils";
 import { calcularCargo } from "@/lib/utils";
+import axios from 'axios';
 
 interface PlayerDonationSummary {
   player_id: string;
@@ -112,18 +113,60 @@ const Donations = () => {
     setCurrentPage(1);
   }, [searchTerm]);
 
-  const handleDeleteGhost = async () => {
-    if (!deleteGhost) return;
-    setDeletingGhost(true);
-    const { error } = await supabase.from('donations').delete().eq('player_name', deleteGhost).is('player_id', null);
-    if (!error) {
-      setPlayerDonations((prev) => prev.filter((p) => p.player_name !== deleteGhost));
-      toast({ title: 'Usuário fantasma removido', description: 'Todas as doações desse nome foram excluídas.', variant: 'default' });
-    } else {
-      toast({ title: 'Erro ao remover', description: error.message, variant: 'destructive' });
+  // Função para atualizar cargo no Discord
+  const atualizarRoleDiscord = async (playerId) => {
+    // Buscar Discord ID associado
+    const { data: link } = await supabase
+      .from('discord_links')
+      .select('discord_id')
+      .eq('player_id', playerId)
+      .single();
+    if (!link || !link.discord_id) return;
+    // Buscar total de doações
+    const { data: donations } = await supabase
+      .from('donations')
+      .select('amount')
+      .eq('player_id', playerId);
+    const total = donations ? donations.reduce((acc, d) => acc + (d.amount || 0), 0) : 0;
+    const cargo = calcularCargo(total);
+    try {
+      await axios.post('https://atlantisstatus.vercel.app/api/discord-roles', {
+        discord_id: link.discord_id,
+        action: 'update_role'
+      });
+      toast({ title: 'Cargo do Discord atualizado!', description: `Novo cargo: ${cargo}` });
+    } catch (err) {
+      console.error('Erro ao atualizar cargo no Discord:', err.response?.data || err.message);
+      toast({ title: 'Erro ao atualizar cargo no Discord', description: err.response?.data?.error || err.message, variant: 'destructive' });
     }
-    setDeletingGhost(false);
-    setDeleteGhost(null);
+  };
+
+  // Função para remover doação e atualizar cargo no Discord
+  const handleDeleteDonation = async (donation) => {
+    setDeletingGhost(true);
+    try {
+      const { error } = await supabase
+        .from('donations')
+        .delete()
+        .eq('id', donation.id);
+      if (error) throw error;
+      // Atualizar cargo no Discord após remoção
+      try {
+        await atualizarRoleDiscord(donation.player_id);
+        toast({ title: 'Cargo do Discord atualizado após remoção!' });
+      } catch (err) {
+        console.error('Erro ao atualizar cargo no Discord após remoção:', err.response?.data || err.message);
+        toast({ title: 'Erro ao atualizar cargo no Discord', description: err.response?.data?.error || err.message, variant: 'destructive' });
+      }
+      toast({ title: 'Doação removida com sucesso' });
+      setDeleteGhost(null);
+      fetchPlayerDonations();
+    } catch (error) {
+      console.error('Erro ao remover doação:', error);
+      toast({ title: 'Erro ao remover doação', description: error.message, variant: 'destructive' });
+    } finally {
+      setDeletingGhost(false);
+    }
   };
 
   // Função para exportar todos os dados filtrados para Excel
@@ -269,6 +312,32 @@ const Donations = () => {
     }
     setLoading(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // Função para buscar e atualizar a lista de doações após remoção
+  const fetchPlayerDonations = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('donations')
+      .select('player_id, player_name, amount')
+      .order('player_name', { ascending: true });
+    if (!error && data) {
+      // Agrupar no front (caso não tenha group by no supabase)
+      const grouped: Record<string, PlayerDonationSummary> = {};
+      for (const donation of data) {
+        const key = donation.player_id || donation.player_name;
+        if (!grouped[key]) {
+          grouped[key] = {
+            player_id: donation.player_id,
+            player_name: donation.player_name,
+            total_amount: 0,
+          };
+        }
+        grouped[key].total_amount += donation.amount || 0;
+      }
+      setPlayerDonations(Object.values(grouped));
+    }
+    setLoading(false);
   };
 
   return (
@@ -420,15 +489,22 @@ const Donations = () => {
           onClose={() => setSelectedPlayer(null)}
         />
       )}
-      <AlertDialog open={!!deleteGhost} onOpenChange={(open) => !open && setDeleteGhost(null)}>
+      <AlertDialog open={!!deleteGhost} onOpenChange={() => setDeleteGhost(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remover usuário fantasma</AlertDialogTitle>
+            <AlertDialogTitle>Remover Doação</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja remover esta doação? Esta ação não pode ser desfeita e pode alterar o cargo do Discord do jogador.
+            </AlertDialogDescription>
           </AlertDialogHeader>
-          <div>Tem certeza que deseja remover todas as doações deste usuário? Esta ação não pode ser desfeita.</div>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deletingGhost} onClick={() => setDeleteGhost(null)}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction disabled={deletingGhost} onClick={handleDeleteGhost}>Remover</AlertDialogAction>
+            <AlertDialogCancel disabled={deletingGhost}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deletingGhost}
+              onClick={() => handleDeleteDonation(playerDonations.find(d => d.player_name === deleteGhost))}
+            >
+              Remover
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
