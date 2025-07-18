@@ -94,11 +94,6 @@ const RankingDonation = () => {
                   ← Voltar
                 </Button>
               </Link>
-              <Link to="/register">
-                <Button className="btn-runescape">
-                  Criar Conta
-                </Button>
-              </Link>
             </div>
           </div>
         </div>
