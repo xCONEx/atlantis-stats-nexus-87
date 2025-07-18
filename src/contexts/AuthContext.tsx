@@ -117,7 +117,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setTimeout(() => {
             fetchUserRole(session.user.id);
             associateDiscordToPlayer();
-            fetchRsUsername(session.user.id);
+            const realDiscordId = Array.isArray(session.user.identities)
+              ? session.user.identities.find(i => i.provider === 'discord')?.id
+              : null;
+            if (realDiscordId) fetchRsUsername(realDiscordId);
           }, 0);
           // Desativar temporariamente o modal de linkar conta para testes
           setShowLinkModal(false);
@@ -143,7 +146,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session?.user) {
         await fetchUserRole(session.user.id);
         associateDiscordToPlayer();
-        fetchRsUsername(session.user.id);
+        const realDiscordId = Array.isArray(session.user.identities)
+          ? session.user.identities.find(i => i.provider === 'discord')?.id
+          : null;
+        if (realDiscordId) fetchRsUsername(realDiscordId);
         // Desativar temporariamente o modal de linkar conta para testes
         setShowLinkModal(false);
         // // Checar se já existe associação
