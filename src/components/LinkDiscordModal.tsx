@@ -52,6 +52,12 @@ export default function LinkDiscordModal({ open, onClose, discordId, onLinked }:
       setLoading(false);
       return;
     }
+    // Garante que o discordId é numérico (id real do Discord)
+    if (!/^[0-9]{15,20}$/.test(discordId)) {
+      toast({ title: 'Erro', description: 'ID do Discord inválido. Faça login com Discord para vincular corretamente.', variant: 'destructive' });
+      setLoading(false);
+      return;
+    }
     // Busca player_id
     const { data: player } = await supabase
       .from('players')
