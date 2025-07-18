@@ -111,6 +111,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Função para garantir que o vínculo inicial Discord -> Supabase existe
+  const ensureDiscordLink = async () => {
+    const discordUser = user;
+    if (!discordUser) return;
+    // Buscar id real do Discord
+    const realDiscordId = Array.isArray(discordUser.identities)
+      ? discordUser.identities.find(i => i.provider === 'discord')?.id
+      : null;
+    if (!realDiscordId) {
+      console.error('ID real do Discord não encontrado no objeto de autenticação!');
+      return;
+    }
+    // Garantir que o ID é numérico
+    if (!/^[0-9]{15,20}$/.test(realDiscordId)) {
+      console.error('ID do Discord não é numérico! Valor:', realDiscordId);
+      toast({ title: 'Erro', description: 'ID do Discord inválido. Faça login novamente com Discord.', variant: 'destructive' });
+      return;
+    }
+    // Upsert apenas com id e discord_id
+    await supabase.from('discord_links').upsert({
+      id: discordUser.id, // UUID do Supabase
+      discord_id: realDiscordId
+    }, { onConflict: 'id' });
+    toast({ title: 'Conta do Discord vinculada com sucesso!', description: 'Sua conta do Discord foi vinculada ao sistema.', variant: 'default' });
+  };
+
   // Função para buscar o username do RuneScape
   const fetchRsUsername = async (discordId: string) => {
     const { data, error } = await supabase
@@ -134,21 +160,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (session?.user) {
           setTimeout(() => {
             fetchUserRole(session.user.id);
-            associateDiscordToPlayer();
+            ensureDiscordLink(); // Garante o vínculo inicial
             const realDiscordId = Array.isArray(session.user.identities)
               ? session.user.identities.find(i => i.provider === 'discord')?.id
               : null;
             if (realDiscordId) fetchRsUsername(realDiscordId);
           }, 0);
-          // Desativar temporariamente o modal de linkar conta para testes
           setShowLinkModal(false);
-          // // Checar se já existe associação
-          // const { data: link } = await supabase
-          //   .from('discord_links')
-          //   .select('username')
-          //   .eq('discord_id', session.user.id)
-          //   .single();
-          // setShowLinkModal(!link);
         } else {
           setUserRole(null);
           setRsUsername(null);
@@ -163,21 +181,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(session?.user ?? null);
       if (session?.user) {
         await fetchUserRole(session.user.id);
-        associateDiscordToPlayer();
+        ensureDiscordLink(); // Garante o vínculo inicial
         const realDiscordId = Array.isArray(session.user.identities)
           ? session.user.identities.find(i => i.provider === 'discord')?.id
           : null;
         if (realDiscordId) fetchRsUsername(realDiscordId);
-        // Desativar temporariamente o modal de linkar conta para testes
         setShowLinkModal(false);
-        // // Checar se já existe associação
-        // const { data: link } = await supabase
-        //   .from('discord_links')
-        //   .select('username')
-        //   .eq('discord_id', session.user.id)
-        //   .single();
-        // // Só mostra o modal se não for admin
-        // setShowLinkModal(!link && userRole !== 'admin');
       } else {
         setRsUsername(null);
       }
