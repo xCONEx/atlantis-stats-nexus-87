@@ -36,13 +36,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                 Configurações
               </Button>
               <Button variant="outline" size="sm" onClick={() => setShowLinkModal(true)}>
-                Vincular Perfil RuneScape
+                {rsUsername ? rsUsername : 'Vincular Perfil RuneScape'}
               </Button>
-              {rsUsername && (
-                <span className="text-runescape-gold font-semibold text-lg" title="Nick do RuneScape">
-                  {rsUsername}
-                </span>
-              )}
               <Button variant="runescape" size="sm">
                 <Zap className="h-4 w-4" />
                 {userRole || 'Membro'}
@@ -60,6 +55,14 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           open={showLinkModal}
           onClose={() => setShowLinkModal(false)}
           discordId={user.id}
+          onLinked={() => {
+            // Atualiza o contexto rsUsername em tempo real
+            if (user.id) {
+              // Chama fetchRsUsername do AuthContext se disponível
+              // Como não está exposto, pode forçar reload ou usar um método do contexto futuramente
+              window.location.reload();
+            }
+          }}
         />
       )}
 
