@@ -69,15 +69,10 @@ const AdminPage = () => {
   const fetchUsers = async () => {
     setFetching(true);
     try {
-      // Buscar user_roles com dados dos perfis dos usuários
+      // Buscar user_roles
       let { data: userRoles, error: userRolesError } = await supabase
         .from('user_roles')
-        .select(`
-          user_id, 
-          role, 
-          clan_name,
-          user_profiles!user_id(email, display_name)
-        `)
+        .select('user_id, role, clan_name')
         .order('role', { ascending: false });
       
       if (userRolesError) {
@@ -87,11 +82,31 @@ const AdminPage = () => {
         return;
       }
 
-      console.log('Dados buscados:', userRoles);
+      // Buscar user_profiles
+      let { data: userProfiles, error: userProfilesError } = await supabase
+        .from('user_profiles')
+        .select('user_id, email, display_name');
 
-      // Processar dados dos usuários
+      if (userProfilesError) {
+        console.error('Erro ao buscar user_profiles:', userProfilesError);
+        // Continuar sem user_profiles
+        userProfiles = [];
+      }
+
+      console.log('User roles:', userRoles);
+      console.log('User profiles:', userProfiles);
+
+      // Criar um mapa de perfis por user_id
+      const profilesMap = new Map();
+      if (userProfiles) {
+        userProfiles.forEach(profile => {
+          profilesMap.set(profile.user_id, profile);
+        });
+      }
+
+      // Combinar dados
       const usersWithDetails = userRoles.map((userRole) => {
-        const profile = userRole.user_profiles;
+        const profile = profilesMap.get(userRole.user_id);
         console.log(`Usuário ${userRole.user_id}:`, profile);
         
         const displayName = profile?.display_name || 
