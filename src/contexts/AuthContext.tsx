@@ -160,8 +160,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Error fetching user role:', error);
         return;
       }
-      
-      setUserRole(data?.role || 'member');
+      // Se não existe role, insere 'member' na tabela
+      if (!data || !data.role) {
+        await supabase.from('user_roles').insert({
+          user_id: userId,
+          role: 'member',
+        });
+        setUserRole('member');
+      } else {
+        setUserRole(data.role);
+      }
     } catch (error) {
       console.error('Error fetching user role:', error);
       setUserRole('member');
@@ -205,9 +213,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .eq('user_id', data.user.id)
             .single();
           if (!roleData) {
-            setPendingUserId(data.user.id);
-            setShowFirstLoginModal(true);
-            return { error: null };
+            // Insere role 'member' automaticamente
+            await supabase.from('user_roles').insert({
+              user_id: data.user.id,
+              role: 'member',
+            });
+            setUserRole('member');
+          } else {
+            setUserRole(roleData.role);
           }
         } catch (e) {
           // Apenas loga, não bloqueia o login
@@ -329,7 +342,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           onSave={async (role, clan, username) => {
             await supabase.from('user_roles').insert({
               user_id: pendingUserId,
-              role,
+              role: role || 'member',
               clan_name: clan
             });
             // Vincular Discord ao nick do RuneScape
