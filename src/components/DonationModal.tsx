@@ -83,32 +83,16 @@ const DonationModal = ({ open, onClose, onSave, donation, editMode = false }: Do
     "Skill Competition"
   ];
 
-  // Busca case-insensitive e parcial
-  const matchedPlayer = useMemo(() => {
-    if (!formData.playerName) return null;
+  // Sugestões de jogadores para autocomplete
+  const playerSuggestions = useMemo(() => {
+    if (!formData.playerName) return [];
     const name = cleanPlayerName(formData.playerName).toLowerCase();
-    return players.find(
-      (p) =>
-        cleanPlayerName(p.display_name || p.username).toLowerCase() === name ||
-        cleanPlayerName(p.username).toLowerCase() === name
-    ) || players.find(
+    return players.filter(
       (p) =>
         cleanPlayerName(p.display_name || p.username).toLowerCase().includes(name) ||
         cleanPlayerName(p.username).toLowerCase().includes(name)
     );
   }, [formData.playerName, players]);
-
-  useEffect(() => {
-    if (matchedPlayer) {
-      setSelectedPlayer(matchedPlayer);
-      setFormData((prev) => ({ ...prev, playerName: matchedPlayer.username }));
-    }
-    // Se não houver match, não seleciona ninguém
-    if (!matchedPlayer && selectedPlayer) {
-      setSelectedPlayer(null);
-    }
-    // eslint-disable-next-line
-  }, [matchedPlayer]);
 
   useEffect(() => {
     const fetchPlayers = async () => {
@@ -133,7 +117,7 @@ const DonationModal = ({ open, onClose, onSave, donation, editMode = false }: Do
       date: formData.date,
       created_by: null, // sempre null
       created_by_email: user?.email || "",
-      notes: formData.notes
+      // notes removido para evitar erro na importação
     };
     // Salvar no Supabase
     const { error } = await supabase.from('donations').insert([
@@ -141,7 +125,7 @@ const DonationModal = ({ open, onClose, onSave, donation, editMode = false }: Do
         amount: donationData.amount,
         created_by: donationData.created_by,
         created_by_email: donationData.created_by_email,
-        description: donationData.notes,
+        description: formData.notes,
         donation_type: 'gp',
         item_name: null,
         player_id: donationData.player_id,
@@ -207,17 +191,37 @@ const DonationModal = ({ open, onClose, onSave, donation, editMode = false }: Do
                   <option key={p.id} value={p.id}>{cleanPlayerName(p.display_name || p.username)}</option>
                 ))}
               </select>
-              <input
-                type="text"
-                id="playerName"
-                className="bg-[#181c24] text-white placeholder-gray-400 border-2 border-border focus:border-runescape-gold rounded-md px-3 py-2 h-11 transition-colors flex-1"
-                placeholder="Ou digite o nome do jogador"
-                value={cleanPlayerName(formData.playerName)}
-                onChange={e => {
-                  setFormData({ ...formData, playerName: e.target.value });
-                  // Não zera selectedPlayer aqui, pois o useEffect já faz isso
-                }}
-              />
+              <div className="relative w-full flex-1">
+                <input
+                  type="text"
+                  id="playerName"
+                  className="bg-[#181c24] text-white placeholder-gray-400 border-2 border-border focus:border-runescape-gold rounded-md px-3 py-2 h-11 transition-colors w-full"
+                  placeholder="Ou digite o nome do jogador"
+                  value={formData.playerName}
+                  onChange={e => {
+                    setFormData({ ...formData, playerName: e.target.value });
+                    setSelectedPlayer(null);
+                  }}
+                  autoComplete="off"
+                />
+                {/* Dropdown de sugestões */}
+                {formData.playerName && playerSuggestions.length > 0 && (
+                  <div className="absolute z-10 left-0 right-0 bg-[#181c24] border border-border rounded-md mt-1 max-h-40 overflow-y-auto shadow-lg">
+                    {playerSuggestions.map((p) => (
+                      <div
+                        key={p.id}
+                        className="px-3 py-2 cursor-pointer hover:bg-runescape-gold/10 text-runescape-gold"
+                        onClick={() => {
+                          setSelectedPlayer(p);
+                          setFormData({ ...formData, playerName: p.username });
+                        }}
+                      >
+                        {cleanPlayerName(p.display_name || p.username)}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
