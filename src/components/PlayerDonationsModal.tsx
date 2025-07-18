@@ -2,6 +2,10 @@ import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 
 interface PlayerDonationsModalProps {
   player_id: string;
@@ -15,6 +19,7 @@ interface DonationDetail {
   amount: number;
   created_at: string;
   created_by?: string;
+  created_by_email?: string;
 }
 
 function cleanPlayerName(name: string) {
@@ -47,6 +52,10 @@ function formatGpWithColor(value: number) {
 const PlayerDonationsModal = ({ player_id, player_name, open, onClose }: PlayerDonationsModalProps) => {
   const [donations, setDonations] = useState<DonationDetail[]>([]);
   const [loading, setLoading] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const { userRole } = useAuth();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!open || !player_id) return;
@@ -54,7 +63,7 @@ const PlayerDonationsModal = ({ player_id, player_name, open, onClose }: PlayerD
       setLoading(true);
       const { data, error } = await supabase
         .from('donations')
-        .select('id, amount, created_at, created_by_email')
+        .select('id, amount, created_at, created_by')
         .eq('player_id', player_id)
         .order('created_at', { ascending: false });
       if (!error && data) setDonations(data);
@@ -62,6 +71,20 @@ const PlayerDonationsModal = ({ player_id, player_name, open, onClose }: PlayerD
     };
     fetchDonations();
   }, [open, player_id]);
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    setDeleting(true);
+    const { error } = await supabase.from('donations').delete().eq('id', deleteId);
+    if (!error) {
+      setDonations((prev) => prev.filter((d) => d.id !== deleteId));
+      toast({ title: 'Doação removida', description: 'A doação foi excluída com sucesso.', variant: 'default' });
+    } else {
+      toast({ title: 'Erro ao remover', description: error.message, variant: 'destructive' });
+    }
+    setDeleting(false);
+    setDeleteId(null);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -82,8 +105,13 @@ const PlayerDonationsModal = ({ player_id, player_name, open, onClose }: PlayerD
                     <CardTitle className={`text-base font-medium ${formatGpWithColor(donation.amount).color}`}>{formatGpWithColor(donation.amount).display} GP</CardTitle>
                     <span className="text-xs text-muted-foreground">{donation.created_at ? new Date(donation.created_at).toLocaleDateString('pt-BR') : ''}</span>
                   </CardHeader>
-                  <CardContent className="p-3 pt-0">
-                    <span className="text-xs text-muted-foreground">Adicionado por: {donation.created_by_email || 'Desconhecido'}</span>
+                  <CardContent className="p-3 pt-0 flex flex-row justify-between items-center">
+                    <span className="text-xs text-muted-foreground">Adicionado por: {donation.created_by || 'Desconhecido'}</span>
+                    {userRole === 'admin' && (
+                      <Button variant="destructive" size="sm" onClick={() => setDeleteId(donation.id)} disabled={deleting}>
+                        Remover
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               ))}
@@ -91,6 +119,19 @@ const PlayerDonationsModal = ({ player_id, player_name, open, onClose }: PlayerD
           )}
         </div>
       </DialogContent>
+      {/* Modal de confirmação de exclusão */}
+      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar remoção</AlertDialogTitle>
+          </AlertDialogHeader>
+          <div>Tem certeza que deseja remover esta doação? Esta ação não pode ser desfeita.</div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting} onClick={() => setDeleteId(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction disabled={deleting} onClick={handleDelete}>Remover</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 };
