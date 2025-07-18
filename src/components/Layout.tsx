@@ -82,7 +82,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         <LinkDiscordModal
           open={showLinkModal}
           onClose={() => setShowLinkModal(false)}
-          discordId={user.id}
+          discordId={Array.isArray(user.identities) ? user.identities.find(i => i.provider === 'discord')?.id || '' : ''}
           onLinked={() => {
             // Atualiza o contexto rsUsername em tempo real
             if (user.id) {
