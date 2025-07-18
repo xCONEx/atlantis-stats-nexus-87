@@ -79,7 +79,13 @@ const Register = () => {
 
       const { error, user: newUser } = await signUp(formData.email, formData.password);
       if (!error && newUser) {
-        // Não inserir em user_roles aqui! Apenas mostrar mensagem de confirmação.
+        // Após criar a conta, insere role 'member' se não foi escolhida outra
+        const roleToInsert = formData.role || 'member';
+        await supabase.from('user_roles').insert({
+          user_id: newUser.id,
+          role: roleToInsert,
+          clan_name: formData.clanName || null
+        });
         toast({
           title: "Conta criada com sucesso!",
           description: "Verifique seu e-mail para confirmar a conta antes de acessar o sistema.",
