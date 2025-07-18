@@ -89,11 +89,6 @@ const Landing = () => {
                   Entrar
                 </Button>
               </Link>
-              <Link to="/register">
-                <Button className="btn-runescape">
-                  Criar Conta
-                </Button>
-              </Link>
             </div>
           </div>
         </div>
@@ -112,14 +107,8 @@ const Landing = () => {
             </p>
           </div>
           
+          {/* Remover botões de criar conta e começar agora */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/register">
-              <Button className="btn-runescape w-full sm:w-auto text-xl py-4 px-8">
-                <Zap className="h-5 w-5" />
-                Começar Agora
-                <ChevronRight className="h-5 w-5" />
-              </Button>
-            </Link>
             <Link to="/ranking">
               <Button className="btn-medieval w-full sm:w-auto text-xl py-4 px-8">
                 <Trophy className="h-5 w-5" />
@@ -210,6 +199,7 @@ const Landing = () => {
                 </p>
               </div>
               
+              {/* Remover botões de criar conta e começar agora */}
               <Link to="/register">
                 <Button className="btn-runescape text-xl py-4 px-8">
                   <Zap className="h-5 w-5" />
