@@ -60,8 +60,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       runescapeApi.getAtlantisArgusClanMembers(),
     ]);
     // Buscar nick do usuário pelo email/nome do Discord (ajustar se necessário)
-    // Aqui, vamos assumir que o usuário já informou o nick em algum momento, ou que o email do Discord é igual ao username (ajustar conforme regra real)
-    // Para este exemplo, vamos associar pelo display_name do Discord, se disponível
     const discordUser = user;
     if (!discordUser) return;
     const displayName = discordUser.user_metadata?.full_name || discordUser.user_metadata?.name || discordUser.email;
@@ -69,10 +67,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Procurar nick nos clãs
     const matches = [...atlantis, ...argus].filter(m => m.name.toLowerCase() === displayName.toLowerCase());
     if (matches.length === 1) {
-      // Salvar associação
+      // Salvar associação com o id real do Discord
+      const realDiscordId = discordUser.identities?.find(i => i.provider === 'discord')?.id || discordUser.id;
       const player = matches[0];
       await supabase.from('discord_links').upsert({
-        discord_id: discordUser.id,
+        discord_id: realDiscordId,
         username: player.name,
         player_id: null // pode buscar o id real se necessário
       }, { onConflict: 'discord_id,username' });
