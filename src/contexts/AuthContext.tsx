@@ -286,7 +286,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Apenas loga, não bloqueia o login
           console.error('Erro ao garantir user_roles:', e);
         }
-        window.location.href = '/dashboard';
+        // Remover redirecionamento automático - cada página gerencia seu próprio redirecionamento
+        // window.location.href = '/dashboard';
       }
 
       return { error: null };
