@@ -5,15 +5,32 @@ import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
+import { Zap, Shield, User, Crown, Users, Settings, UserCheck } from 'lucide-react';
 
 const ADMIN_ROLES = ['admin', 'leader'];
 
 const roleLabels: Record<string, string> = {
   admin: 'Admin',
-  leader: 'Leader',
+  leader: 'Líder',
+  'vice-leader': 'Vice-líder',
+  coordinator: 'Coordenador',
+  fiscal: 'Fiscal',
+  organizer: 'Organizador',
+  administrator: 'Administrador',
+  'admin-legado': 'Admin-legado',
   member: 'Member',
-  moderator: 'Moderator',
-  staff: 'Staff',
+};
+
+const roleIcons: Record<string, React.ComponentType<any>> = {
+  admin: Crown,
+  leader: Zap,
+  'vice-leader': Shield,
+  coordinator: Users,
+  fiscal: UserCheck,
+  organizer: User,
+  administrator: Settings,
+  'admin-legado': Crown,
+  member: User,
 };
 
 const AdminPage = () => {
@@ -52,10 +69,15 @@ const AdminPage = () => {
   const fetchUsers = async () => {
     setFetching(true);
     try {
-      // Buscar apenas user_roles
+      // Buscar user_roles com dados dos perfis dos usuários
       let { data: userRoles, error: userRolesError } = await supabase
         .from('user_roles')
-        .select('user_id, role, clan_name')
+        .select(`
+          user_id, 
+          role, 
+          clan_name,
+          user_profiles!user_id(email, display_name)
+        `)
         .order('role', { ascending: false });
       
       if (userRolesError) {
@@ -67,28 +89,15 @@ const AdminPage = () => {
 
       // Processar dados dos usuários
       const usersWithDetails = userRoles.map((userRole) => {
-        // Se for o usuário atual, usar dados do contexto
-        const isCurrentUser = user && user.id === userRole.user_id;
-        
-        if (isCurrentUser) {
-          const displayName = user.user_metadata?.full_name || 
-                             user.user_metadata?.name || 
-                             user.email || 
-                             'Usuário Atual';
-          return {
-            ...userRole,
-            displayName,
-            email: user.email
-          };
-        }
-        
-        // Para outros usuários, usar email se disponível ou ID truncado
-        const displayName = `Usuário ${userRole.user_id.slice(0, 8)}...`;
-        
+        const profile = userRole.user_profiles;
+        const displayName = profile?.display_name || 
+                           profile?.email || 
+                           `Usuário ${userRole.user_id.slice(0, 8)}...`;
+
         return {
           ...userRole,
           displayName,
-          email: null // Não temos acesso ao email de outros usuários
+          email: profile?.email || null
         };
       });
 
@@ -277,17 +286,31 @@ const AdminPage = () => {
                   <td className="px-4 py-3">
                     {editingRole === u.user_id ? (
                       <Select value={roleDraft} onValueChange={setRoleDraft}>
-                        <SelectTrigger className="w-32">
+                        <SelectTrigger className="w-40">
                           <SelectValue placeholder="Selecione" />
                         </SelectTrigger>
                         <SelectContent>
-                          {Object.keys(roleLabels).map(role => (
-                            <SelectItem key={role} value={role}>{roleLabels[role]}</SelectItem>
-                          ))}
+                          {Object.keys(roleLabels).map(role => {
+                            const IconComponent = roleIcons[role];
+                            return (
+                              <SelectItem key={role} value={role}>
+                                <div className="flex items-center gap-2">
+                                  {IconComponent && <IconComponent className="h-4 w-4" />}
+                                  {roleLabels[role]}
+                                </div>
+                              </SelectItem>
+                            );
+                          })}
                         </SelectContent>
                       </Select>
                     ) : (
-                      <span className="capitalize font-semibold text-runescape-gold">{roleLabels[u.role] || u.role}</span>
+                      <div className="flex items-center gap-2">
+                        {(() => {
+                          const IconComponent = roleIcons[u.role];
+                          return IconComponent ? <IconComponent className="h-4 w-4 text-runescape-gold" /> : null;
+                        })()}
+                        <span className="capitalize font-semibold text-runescape-gold">{roleLabels[u.role] || u.role}</span>
+                      </div>
                     )}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{u.clan_name || '-'}</td>
