@@ -242,6 +242,32 @@ const DonationModal = ({ open, onClose, onSave, donation, editMode = false }: Do
     }
   };
 
+  // Função para remover doação e atualizar cargo no Discord
+  const handleDelete = async () => {
+    if (!selectedPlayer || !donation) return;
+    try {
+      const { error } = await supabase
+        .from('donations')
+        .delete()
+        .eq('id', donation.id);
+      if (error) throw error;
+      // Atualizar cargo no Discord após remoção
+      try {
+        await atualizarRoleDiscord(selectedPlayer.id);
+        toast({ title: 'Cargo do Discord atualizado após remoção!' });
+      } catch (err) {
+        console.error('Erro ao atualizar cargo no Discord após remoção:', err.response?.data || err.message);
+        toast({ title: 'Erro ao atualizar cargo no Discord', description: err.response?.data?.error || err.message, variant: 'destructive' });
+      }
+      toast({ title: 'Doação removida com sucesso' });
+      onSave();
+      onClose();
+    } catch (error) {
+      console.error('Erro ao remover doação:', error);
+      toast({ title: 'Erro ao remover doação', description: error.message, variant: 'destructive' });
+    }
+  };
+
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -449,7 +475,7 @@ const DonationModal = ({ open, onClose, onSave, donation, editMode = false }: Do
         </form>
         {donation && (
           <div className="text-xs text-muted-foreground mt-4">
-            Adicionado por: {donation.created_by_email ? donation.created_by_email : (donation.created_by || 'Desconhecido')}
+            Adicionado por: {donation.created_by_email || donation.created_by || donation.user_email || 'Desconhecido'}
           </div>
         )}
       </DialogContent>
