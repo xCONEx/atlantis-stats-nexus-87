@@ -181,7 +181,7 @@ const EnhancedDonationModal = ({ open, onClose, onSave, donation, editMode = fal
       if (link && link.discord_id && cargoAntes !== cargoDepois) {
         // Chamar endpoint para atualizar cargo SÓ se mudou
         try {
-          await axios.post('/api/discord-roles', {
+          await axios.post('https://atlantisstatus.vercel.app/api/discord-roles', {
             discord_id: link.discord_id,
             action: 'update_role'
           });
