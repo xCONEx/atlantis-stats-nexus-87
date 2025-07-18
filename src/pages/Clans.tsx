@@ -7,6 +7,25 @@ import { useToast } from "@/hooks/use-toast";
 import { runescapeApi } from "@/services/runescapeApi";
 import { supabase } from "@/integrations/supabase/client";
 
+// Função utilitária para calcular o nível de combate (RuneScape 3)
+function calculateCombatLevel(hiscores: any) {
+  // Fórmula oficial RS3: https://runescape.wiki/w/Combat_level
+  const defence = hiscores.defence?.level || 1;
+  const constitution = hiscores.constitution?.level || 10;
+  const prayer = hiscores.prayer?.level || 1;
+  const summoning = hiscores.summoning?.level || 1;
+  const attack = hiscores.attack?.level || 1;
+  const strength = hiscores.strength?.level || 1;
+  const magic = hiscores.magic?.level || 1;
+  const ranged = hiscores.ranged?.level || 1;
+
+  const base = 0.25 * (defence + constitution + Math.floor(prayer / 2) + Math.floor(summoning / 2));
+  const melee = 0.325 * (attack + strength);
+  const range = 0.325 * Math.floor(ranged * 1.5);
+  const mage = 0.325 * Math.floor(magic * 1.5);
+  return Math.floor(base + Math.max(melee, range, mage));
+}
+
 const Clans = () => {
   const [loading, setLoading] = useState(false);
   const [atlantisCount, setAtlantisCount] = useState<number | null>(null);
@@ -27,29 +46,60 @@ const Clans = () => {
     fetchClanCounts();
   }, []);
 
+  const TEN_HOURS_MS = 10 * 60 * 60 * 1000;
+
   const importClanMembers = async (clanName: string) => {
     setLoading(true);
     try {
       const members = await runescapeApi.getClanMembers(clanName, 500);
+      // Buscar todos os jogadores já existentes desse clã no Supabase
+      const { data: existingPlayers, error: fetchError } = await supabase
+        .from("players")
+        .select("username, updated_at")
+        .eq("clan_name", clanName);
+      const existingMap = (existingPlayers || []).reduce((acc: any, p: any) => {
+        acc[p.username.toLowerCase()] = p.updated_at ? new Date(p.updated_at) : null;
+        return acc;
+      }, {});
+
       let successCount = 0;
       let errorCount = 0;
+      let skippedCount = 0;
       for (const member of members) {
-        // Upsert (insert or update) player in Supabase
-        const { error } = await supabase.from("players").upsert({
-          username: member.name,
-          clan_name: clanName,
-          clan_rank: member.rank,
-          total_experience: member.experience,
-          is_active: true,
-          updated_at: new Date().toISOString(),
-        }, { onConflict: "username" });
-        if (error) errorCount++;
-        else successCount++;
+        const lastUpdate = existingMap[member.name.toLowerCase()];
+        if (lastUpdate && Date.now() - lastUpdate.getTime() < TEN_HOURS_MS) {
+          skippedCount++;
+          continue; // Pula jogadores atualizados nas últimas 10h
+        }
+        try {
+          // Buscar hiscores do jogador
+          const hiscores = await runescapeApi.getPlayerHiscores(member.name);
+          // Calcular total_level (soma dos níveis das skills)
+          const total_level = Object.values(hiscores).reduce((acc: number, skill: any) => acc + (skill.level || 0), 0);
+          // Calcular combat_level
+          const combat_level = calculateCombatLevel(hiscores);
+          // Salvar no Supabase
+          const { error } = await supabase.from("players").upsert({
+            username: member.name,
+            clan_name: clanName,
+            clan_rank: member.rank,
+            total_experience: member.experience,
+            total_level,
+            combat_level,
+            is_active: true,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: "username" });
+          if (error) errorCount++;
+          else successCount++;
+        } catch (err) {
+          errorCount++;
+          // Continua para o próximo jogador
+        }
       }
       await fetchClanCounts(); // Atualiza a contagem após importação
       toast({
         title: "Importação concluída",
-        description: `${successCount} membros importados/atualizados com sucesso para o clã ${clanName}. ${errorCount > 0 ? errorCount + ' erros.' : ''}`,
+        description: `${successCount} membros importados/atualizados, ${skippedCount} já estavam atualizados, ${errorCount > 0 ? errorCount + ' erros.' : ''}`,
       });
     } catch (error) {
       toast({
