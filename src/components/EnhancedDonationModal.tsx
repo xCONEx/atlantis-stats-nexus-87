@@ -172,21 +172,14 @@ const EnhancedDonationModal = ({ open, onClose, onSave, donation, editMode = fal
       const totalAfter = donationsAfter ? donationsAfter.reduce((acc, d) => acc + (d.amount || 0), 0) : 0;
       const cargoDepois = calcularCargo(totalAfter);
 
-      // Buscar discord_id do usuário
-      const { data: link } = await supabase
-        .from('discord_links')
-        .select('discord_id')
-        .eq('player_id', selectedPlayer.id)
-        .single();
-      if (link && link.discord_id && cargoAntes !== cargoDepois) {
-        // Chamar endpoint para atualizar cargo SÓ se mudou
+      // Atualizar cargo no Discord (centralizado)
+      if (cargoAntes !== cargoDepois) {
         try {
-          await axios.post('https://atlantisstatus.vercel.app/api/discord-roles', {
-            discord_id: link.discord_id,
-            action: 'update_role'
-          });
+          await atualizarRoleDiscord(selectedPlayer.id);
+          toast({ title: 'Cargo do Discord atualizado!', description: `Novo cargo: ${cargoDepois}` });
         } catch (err) {
           console.error('Erro ao atualizar cargo no Discord:', err.response?.data || err.message);
+          toast({ title: 'Erro ao atualizar cargo no Discord', description: err.response?.data?.error || err.message, variant: 'destructive' });
         }
       }
 
@@ -202,6 +195,35 @@ const EnhancedDonationModal = ({ open, onClose, onSave, donation, editMode = fal
         title: 'Erro',
         description: 'Erro ao salvar doação',
       });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Adicionar chamada após exclusão de doação
+  const handleDelete = async () => {
+    if (!selectedPlayer || !donation) return;
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('donations')
+        .delete()
+        .eq('id', donation.id);
+      if (error) throw error;
+      // Atualizar cargo no Discord após remoção
+      try {
+        await atualizarRoleDiscord(selectedPlayer.id);
+        toast({ title: 'Cargo do Discord atualizado após remoção!' });
+      } catch (err) {
+        console.error('Erro ao atualizar cargo no Discord após remoção:', err.response?.data || err.message);
+        toast({ title: 'Erro ao atualizar cargo no Discord', description: err.response?.data?.error || err.message, variant: 'destructive' });
+      }
+      toast({ title: 'Doação removida com sucesso' });
+      onSave();
+      onClose();
+    } catch (error) {
+      console.error('Erro ao remover doação:', error);
+      toast({ title: 'Erro ao remover doação', description: error.message, variant: 'destructive' });
     } finally {
       setLoading(false);
     }
