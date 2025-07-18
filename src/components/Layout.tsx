@@ -17,7 +17,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-3">
-                <Zap className="h-8 w-8 text-runescape-gold animate-glow-pulse" />
+                <img src="/icon/2logo.png" alt="Logo Atlantis" className="h-8 w-8 animate-glow-pulse" />
                 <div>
                   <h1 className="text-2xl font-cinzel font-bold text-runescape-gold">
                     Atlantis Stats
