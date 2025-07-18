@@ -10,6 +10,9 @@ import PlayerDonationsModal from "@/components/PlayerDonationsModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
+import { useMemo } from "react";
+import * as XLSX from "xlsx";
+import { useRef } from "react";
 
 interface PlayerDonationSummary {
   player_id: string;
@@ -55,11 +58,14 @@ const Donations = () => {
   const { toast } = useToast();
   const [deleteGhost, setDeleteGhost] = useState<string | null>(null);
   const [deletingGhost, setDeletingGhost] = useState(false);
+  const PAGE_SIZE = 120; // 30 linhas x 4 cards
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchPlayerDonations = async () => {
       setLoading(true);
-      // Consulta agrupada por jogador
       const { data, error } = await supabase
         .from('donations')
         .select('player_id, player_name, amount')
@@ -87,13 +93,22 @@ const Donations = () => {
         }
         // Ordenar alfabeticamente
         arr.sort((a, b) => a.player_name.localeCompare(b.player_name, 'pt-BR'));
-        setPlayerDonations(arr);
+        setTotalPages(Math.max(1, Math.ceil(arr.length / PAGE_SIZE)));
+        // Paginação
+        const start = (currentPage - 1) * PAGE_SIZE;
+        const end = start + PAGE_SIZE;
+        setPlayerDonations(arr.slice(start, end));
       }
       setLoading(false);
     };
     fetchPlayerDonations();
     // eslint-disable-next-line
-  }, [showDonationModal, searchTerm]);
+  }, [showDonationModal, searchTerm, currentPage]);
+
+  // Atualiza página se filtro reduzir o total
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   const handleDeleteGhost = async () => {
     if (!deleteGhost) return;
@@ -107,6 +122,105 @@ const Donations = () => {
     }
     setDeletingGhost(false);
     setDeleteGhost(null);
+  };
+
+  // Função para exportar todos os dados filtrados para Excel
+  const handleExportExcel = async () => {
+    setLoading(true);
+    // Buscar todos os dados agrupados (sem paginação)
+    const { data, error } = await supabase
+      .from('donations')
+      .select('player_id, player_name, amount')
+      .order('player_name', { ascending: true });
+    if (!error && data) {
+      // Agrupar no front
+      const grouped: Record<string, PlayerDonationSummary> = {};
+      data.forEach((donation: any) => {
+        const key = donation.player_id || donation.player_name;
+        if (!grouped[key]) {
+          grouped[key] = {
+            player_id: donation.player_id,
+            player_name: donation.player_name || 'Jogador',
+            total_amount: 0,
+          };
+        }
+        grouped[key].total_amount += donation.amount || 0;
+      });
+      let arr = Object.values(grouped);
+      // Filtro de busca
+      if (searchTerm.trim()) {
+        arr = arr.filter((p) =>
+          p.player_name.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      }
+      // Ordenar alfabeticamente
+      arr.sort((a, b) => a.player_name.localeCompare(b.player_name, 'pt-BR'));
+      // Montar dados para Excel
+      const excelData = arr.map((p) => ({
+        "Nome do Jogador": p.player_name,
+        "Valor Total Doado": p.total_amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+      }));
+      const ws = XLSX.utils.json_to_sheet(excelData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Doações");
+      XLSX.writeFile(wb, "doacoes.xlsx");
+    }
+    setLoading(false);
+  };
+
+  // Função para importar doações de um arquivo Excel
+  const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLoading(true);
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: "array" });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows: any[] = XLSX.utils.sheet_to_json(sheet);
+      // Buscar todos os jogadores ativos para associar pelo nome
+      const { data: players } = await supabase
+        .from('players')
+        .select('id, username, display_name, is_active');
+      const donationsToInsert = rows.map((row) => {
+        const nome = (row["Nome do Jogador"] || "").toString().trim();
+        const valorStr = (row["Valor Total Doado"] || "0").toString().replace(/[^\d,\.]/g, '').replace(',', '.');
+        const valor = parseFloat(valorStr);
+        // Busca exata ou parcial (case-insensitive)
+        const player = players?.find(
+          (p) =>
+            p.is_active &&
+            (p.display_name?.toLowerCase() === nome.toLowerCase() ||
+              p.username?.toLowerCase() === nome.toLowerCase() ||
+              p.display_name?.toLowerCase().includes(nome.toLowerCase()) ||
+              p.username?.toLowerCase().includes(nome.toLowerCase()))
+        );
+        return {
+          player_id: player ? player.id : null,
+          player_name: nome,
+          amount: valor,
+          event: 'Importação Excel',
+          portals: 1,
+          date: new Date().toISOString().split('T')[0],
+          created_by: null,
+          created_by_email: 'import-excel',
+          notes: 'Importado via Excel'
+        };
+      });
+      // Inserir em lotes de 100 para evitar timeout
+      for (let i = 0; i < donationsToInsert.length; i += 100) {
+        const batch = donationsToInsert.slice(i, i + 100);
+        const { error } = await supabase.from('donations').insert(batch);
+        if (error) throw error;
+      }
+      toast({ title: 'Importação concluída', description: 'Doações importadas com sucesso!', variant: 'default' });
+      setShowDonationModal(false); // Fecha modal se aberto
+      setCurrentPage(1); // Volta para primeira página
+    } catch (err: any) {
+      toast({ title: 'Erro na importação', description: err.message || 'Erro desconhecido', variant: 'destructive' });
+    }
+    setLoading(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   return (
@@ -198,6 +312,32 @@ const Donations = () => {
               )}
             </CardContent>
           </Card>
+        </div>
+        <div className="flex justify-between items-center mt-4">
+          <div className="text-sm text-muted-foreground">
+            Exibindo {playerDonations.length > 0 ? ((currentPage - 1) * PAGE_SIZE + 1) : 0}
+            -{(currentPage - 1) * PAGE_SIZE + playerDonations.length} de {totalPages * PAGE_SIZE}
+          </div>
+          <div className="flex gap-2 items-center">
+            <Button variant="outline" size="sm" onClick={handleExportExcel} disabled={loading}>
+              Exportar para Excel
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={loading}>
+              Importar Excel
+            </Button>
+            <input
+              type="file"
+              accept=".xlsx, .xls"
+              ref={fileInputRef}
+              style={{ display: 'none' }}
+              onChange={handleImportExcel}
+            />
+            <Button variant="outline" size="sm" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>« Primeira</Button>
+            <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>‹ Anterior</Button>
+            <span className="text-sm">Página {currentPage} de {totalPages}</span>
+            <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>Próxima ›</Button>
+            <Button variant="outline" size="sm" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages}>Última »</Button>
+          </div>
         </div>
       </div>
 
