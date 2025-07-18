@@ -69,7 +69,7 @@ const AdminPage = () => {
   const fetchUsers = async () => {
     setFetching(true);
     try {
-      // Buscar user_roles
+      // Buscar apenas user_roles por enquanto
       let { data: userRoles, error: userRolesError } = await supabase
         .from('user_roles')
         .select('user_id, role, clan_name')
@@ -82,44 +82,32 @@ const AdminPage = () => {
         return;
       }
 
-      // Buscar user_profiles
-      let { data: userProfiles, error: userProfilesError } = await supabase
-        .from('user_profiles')
-        .select('user_id, email, display_name');
+      console.log('User roles encontrados:', userRoles.length);
 
-      if (userProfilesError) {
-        console.error('Erro ao buscar user_profiles:', userProfilesError);
-        // Continuar sem user_profiles
-        userProfiles = [];
-      }
-
-      console.log('User roles:', userRoles);
-      console.log('User profiles:', userProfiles);
-
-      // Criar um mapa de perfis por user_id
-      const profilesMap = new Map();
-      if (userProfiles && userProfiles.length > 0) {
-        userProfiles.forEach(profile => {
-          profilesMap.set(profile.user_id, profile);
-        });
-        console.log('Profiles map criado com', profilesMap.size, 'perfis');
-      } else {
-        console.log('Nenhum perfil encontrado ou userProfiles é null/empty');
-      }
-
-      // Combinar dados
+      // Processar dados dos usuários
       const usersWithDetails = userRoles.map((userRole) => {
-        const profile = profilesMap.get(userRole.user_id);
-        console.log(`Usuário ${userRole.user_id}:`, profile);
+        // Se for o usuário atual, usar dados do contexto
+        const isCurrentUser = user && user.id === userRole.user_id;
         
-        const displayName = profile?.display_name || 
-                           profile?.email || 
-                           `Usuário ${userRole.user_id.slice(0, 8)}...`;
-
+        if (isCurrentUser) {
+          const displayName = user.user_metadata?.full_name || 
+                             user.user_metadata?.name || 
+                             user.email || 
+                             'Usuário Atual';
+          return {
+            ...userRole,
+            displayName,
+            email: user.email
+          };
+        }
+        
+        // Para outros usuários, usar ID truncado
+        const displayName = `Usuário ${userRole.user_id.slice(0, 8)}...`;
+        
         return {
           ...userRole,
           displayName,
-          email: profile?.email || null
+          email: null
         };
       });
 
