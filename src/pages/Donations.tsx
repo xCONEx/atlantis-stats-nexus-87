@@ -14,6 +14,7 @@ import { useMemo } from "react";
 import * as XLSX from "xlsx";
 import { useRef } from "react";
 import { hasRolePermission } from "@/lib/utils";
+import { calcularCargo } from "@/lib/utils";
 
 interface PlayerDonationSummary {
   player_id: string;
@@ -180,12 +181,13 @@ const Donations = () => {
       const workbook = XLSX.read(data, { type: "array" });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const rows: any[] = XLSX.utils.sheet_to_json(sheet);
+      console.log('Linhas lidas da planilha:', rows);
       // Buscar todos os jogadores ativos para associar pelo nome
       const { data: players } = await supabase
         .from('players')
         .select('id, username, display_name, is_active');
       const donationsToInsert: any[] = [];
-      rows.forEach((row) => {
+      rows.forEach((row, idx) => {
         const nome = (row["Jogador"] || "").toString().trim();
         // PORTATEIS
         const portateis = parseInt(row["PORTATEIS"] || "0", 10);
@@ -238,13 +240,22 @@ const Donations = () => {
           });
         }
       });
+      console.log('Doações a serem inseridas:', donationsToInsert);
       // Inserir em lotes de 100 para evitar timeout
+      let totalInseridas = 0;
       for (let i = 0; i < donationsToInsert.length; i += 100) {
         const batch = donationsToInsert.slice(i, i + 100);
-        const { error } = await supabase.from('donations').insert(batch);
-        if (error) throw error;
+        const { error, count } = await supabase.from('donations').insert(batch, { count: 'exact' });
+        if (error) {
+          console.error('Erro ao inserir batch:', error, batch);
+          toast({ title: 'Erro na importação', description: error.message || 'Erro desconhecido', variant: 'destructive' });
+          setLoading(false);
+          if (fileInputRef.current) fileInputRef.current.value = '';
+          return;
+        }
+        totalInseridas += batch.length;
       }
-      let msg = 'Doações importadas com sucesso!';
+      let msg = `Doações importadas com sucesso! Total inseridas: ${totalInseridas}`;
       if (fantasmas.length > 0) {
         const unicos = Array.from(new Set(fantasmas));
         msg += `\nJogadores não encontrados (fantasmas):\n${unicos.join(', ')}`;
@@ -253,6 +264,7 @@ const Donations = () => {
       setShowDonationModal(false); // Fecha modal se aberto
       setCurrentPage(1); // Volta para primeira página
     } catch (err: any) {
+      console.error('Erro geral na importação:', err);
       toast({ title: 'Erro na importação', description: err.message || 'Erro desconhecido', variant: 'destructive' });
     }
     setLoading(false);
@@ -309,7 +321,7 @@ const Donations = () => {
                           // Remover onClick do Card
                         >
                           <CardHeader>
-                            <CardTitle className="truncate">{cleanPlayerName(player.player_name)}</CardTitle>
+                            <CardTitle className="truncate">{cleanPlayerName(player.player_name)} {(() => { const cargo = calcularCargo(player.total_amount); return cargo.emoji ? <span title={cargo.titulo} style={{marginLeft:4}}>{cargo.emoji}</span> : null; })()}</CardTitle>
                             <CardDescription>Total doado</CardDescription>
                           </CardHeader>
                           <CardContent>
