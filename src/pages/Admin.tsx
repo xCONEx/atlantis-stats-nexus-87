@@ -65,12 +65,20 @@ const AdminPage = () => {
         return;
       }
 
-      // Usar apenas os dados de user_roles
-      const usersWithDetails = userRoles.map((userRole) => ({
-        ...userRole,
-        users: null, // Não temos acesso aos dados do usuário
-        discord_links: null // Não temos acesso aos dados do Discord
-      }));
+      // Para cada user_role, criar dados básicos
+      const usersWithDetails = userRoles.map((userRole) => {
+        // Se for o usuário atual, usar os dados disponíveis
+        const isCurrentUser = user && user.id === userRole.user_id;
+        const displayName = isCurrentUser 
+          ? (user.user_metadata?.full_name || user.user_metadata?.name || user.email || 'Usuário Atual')
+          : `Usuário ${userRole.user_id.slice(0, 8)}...`;
+
+        return {
+          ...userRole,
+          displayName,
+          email: isCurrentUser ? user.email : null
+        };
+      });
 
       setUsers(usersWithDetails);
     } catch (error) {
@@ -90,7 +98,8 @@ const AdminPage = () => {
   const filteredUsers = users.filter(u => {
     const searchTerm = search.toLowerCase();
     return (
-      u.user_id.toLowerCase().includes(searchTerm) ||
+      u.displayName.toLowerCase().includes(searchTerm) ||
+      (u.email && u.email.toLowerCase().includes(searchTerm)) ||
       u.role.toLowerCase().includes(searchTerm) ||
       (u.clan_name && u.clan_name.toLowerCase().includes(searchTerm))
     );
@@ -221,7 +230,7 @@ const AdminPage = () => {
       </div>
       <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <Input
-          placeholder="Buscar por ID, cargo ou clã..."
+          placeholder="Buscar por nome, email, cargo ou clã..."
           value={search}
           onChange={e => setSearch(e.target.value)}
           className="w-full md:w-80"
@@ -238,7 +247,7 @@ const AdminPage = () => {
           <table className="min-w-full divide-y divide-runescape-gold/10">
             <thead className="bg-runescape-gold/10">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-runescape-gold">ID do Usuário</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-runescape-gold">Nome do Usuário</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-runescape-gold">Cargo no Sistema</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-runescape-gold">Clã</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-runescape-gold">Ações</th>
@@ -247,7 +256,12 @@ const AdminPage = () => {
             <tbody className="bg-card divide-y divide-runescape-gold/10">
               {filteredUsers.map((u) => (
                 <tr key={u.user_id} className="hover:bg-runescape-gold/5 transition">
-                  <td className="px-4 py-3 font-mono text-sm text-muted-foreground">{u.user_id}</td>
+                  <td className="px-4 py-3">
+                    <div>
+                      <div className="font-medium text-runescape-gold">{u.displayName}</div>
+                      {u.email && <div className="text-xs text-muted-foreground">{u.email}</div>}
+                    </div>
+                  </td>
                   <td className="px-4 py-3">
                     {editingRole === u.user_id ? (
                       <Select value={roleDraft} onValueChange={setRoleDraft}>
