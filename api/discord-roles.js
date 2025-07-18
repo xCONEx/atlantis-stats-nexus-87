@@ -1,7 +1,7 @@
 import { supabase } from '../src/integrations/supabase/client.js';
 import axios from 'axios';
 
-const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
+const BOT_TOKEN = 'MTM5NTQ2MTkyMjAwNjIzNzMxNQ.GHUCBY.pNwIC4yHVmLkQWaO_SOYlq527fupHmUsuz6N1M';
 
 const ROLE_IDS = {
   Generoso: "1395811213144887317",
