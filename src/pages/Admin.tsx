@@ -37,6 +37,9 @@ const AdminPage = () => {
       const { error } = await signIn(email, password);
       if (error) {
         setLoginError(error.message || 'Erro ao fazer login');
+      } else {
+        // Login bem-sucedido - redirecionar para /admin
+        window.location.href = '/admin';
       }
     } catch (err: any) {
       setLoginError('Erro ao fazer login');
@@ -110,20 +113,72 @@ const AdminPage = () => {
   // Proteção de rota
   if (!user) {
     return (
-      <div className="max-w-sm mx-auto mt-20 p-8 bg-card rounded shadow">
-        <h1 className="text-2xl font-bold mb-6 text-runescape-gold">Login Admin/Líder</h1>
-        <form onSubmit={handleEmailLogin} className="space-y-4">
-          <div>
-            <label className="block mb-1 font-medium">E-mail</label>
-            <input type="email" className="w-full border rounded px-3 py-2" value={email} onChange={e => setEmail(e.target.value)} required />
+      <div className="min-h-screen bg-gradient-to-br from-[#181c24] to-[#23283a] flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-card rounded-xl shadow-2xl border border-runescape-gold/30 p-8">
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-runescape-gold/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-runescape-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h1 className="text-3xl font-bold text-runescape-gold mb-2">Painel Administrativo</h1>
+            <p className="text-muted-foreground">Acesso restrito para administradores e líderes</p>
           </div>
-          <div>
-            <label className="block mb-1 font-medium">Senha</label>
-            <input type="password" className="w-full border rounded px-3 py-2" value={password} onChange={e => setPassword(e.target.value)} required />
+          
+          <form onSubmit={handleEmailLogin} className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-runescape-gold">E-mail</label>
+              <Input 
+                type="email" 
+                value={email} 
+                onChange={e => setEmail(e.target.value)} 
+                placeholder="seu@email.com"
+                className="bg-background border-runescape-gold/20 focus:border-runescape-gold"
+                required 
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-runescape-gold">Senha</label>
+              <Input 
+                type="password" 
+                value={password} 
+                onChange={e => setPassword(e.target.value)} 
+                placeholder="••••••••"
+                className="bg-background border-runescape-gold/20 focus:border-runescape-gold"
+                required 
+              />
+            </div>
+            
+            {loginError && (
+              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                <p className="text-red-400 text-sm">{loginError}</p>
+              </div>
+            )}
+            
+            <Button 
+              type="submit" 
+              className="w-full bg-runescape-gold hover:bg-runescape-gold/90 text-black font-semibold" 
+              disabled={loading}
+            >
+              {loading ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin"></div>
+                  Entrando...
+                </div>
+              ) : (
+                'Acessar Painel'
+              )}
+            </Button>
+          </form>
+          
+          <div className="mt-8 pt-6 border-t border-runescape-gold/10">
+            <p className="text-xs text-muted-foreground text-center">
+              Este painel é exclusivo para administração do clã Atlantis.<br/>
+              Todas as ações são registradas em log de auditoria.
+            </p>
           </div>
-          {loginError && <div className="text-red-500 text-sm">{loginError}</div>}
-          <Button type="submit" className="w-full" disabled={loading}>{loading ? 'Entrando...' : 'Entrar'}</Button>
-        </form>
+        </div>
       </div>
     );
   }
