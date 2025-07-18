@@ -44,6 +44,7 @@ const AdminPage = () => {
   const [editingRole, setEditingRole] = useState<string | null>(null);
   const [roleDraft, setRoleDraft] = useState<string>('');
   const [fetching, setFetching] = useState(false);
+  const [migrating, setMigrating] = useState(false);
 
   // Login por e-mail restrito
   const handleEmailLogin = async (e: React.FormEvent) => {
@@ -169,6 +170,45 @@ const AdminPage = () => {
     setLoading(false);
   };
 
+  // Função para popular user_profiles
+  const handlePopulateUserProfiles = async () => {
+    setMigrating(true);
+    try {
+      const response = await fetch('/api/populate-user-profiles', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        toast({ 
+          title: 'Migração concluída!', 
+          description: `${result.count} perfis de usuário foram criados.` 
+        });
+        // Recarregar dados
+        fetchUsers();
+      } else {
+        toast({ 
+          title: 'Erro na migração', 
+          description: result.error || 'Erro desconhecido', 
+          variant: 'destructive' 
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao executar migração:', error);
+      toast({ 
+        title: 'Erro na migração', 
+        description: 'Falha ao conectar com o servidor', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setMigrating(false);
+    }
+  };
+
   // Proteção de rota
   if (!user) {
     return (
@@ -251,6 +291,20 @@ const AdminPage = () => {
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold text-runescape-gold">Painel de Administração do Sistema</h1>
         <div className="flex gap-3">
+          <Button 
+            variant="outline" 
+            onClick={handlePopulateUserProfiles}
+            disabled={migrating}
+          >
+            {migrating ? (
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-runescape-gold/30 border-t-runescape-gold rounded-full animate-spin"></div>
+                Migrando...
+              </div>
+            ) : (
+              'Migrar Usuários'
+            )}
+          </Button>
           <Button variant="outline" onClick={() => window.location.href = '/dashboard'}>
             Dashboard
           </Button>
