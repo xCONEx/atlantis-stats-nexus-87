@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Link, useLocation } from "react-router-dom";
 import { useState } from 'react';
 import LinkDiscordModal from '@/components/LinkDiscordModal';
+import { hasRolePermission } from "@/lib/utils";
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const { signOut, userRole, rsUsername, user } = useAuth();
@@ -105,19 +106,23 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                 Doações
               </Button>
             </Link>
-            <Link to="/clans">
-              <Button 
-                variant="ghost" 
-                className={`rounded-none border-b-2 ${
-                  location.pathname === '/clans' 
-                    ? 'border-runescape-gold' 
-                    : 'border-transparent hover:border-runescape-gold'
-                }`}
-              >
-                <Zap className="h-4 w-4" />
-                Clãs
-              </Button>
-            </Link>
+            {hasRolePermission(userRole, [
+              'admin', 'administrator', 'leader', 'vice-leader', 'coordinator'
+            ]) && (
+              <Link to="/clans">
+                <Button 
+                  variant="ghost" 
+                  className={`rounded-none border-b-2 ${
+                    location.pathname === '/clans' 
+                      ? 'border-runescape-gold' 
+                      : 'border-transparent hover:border-runescape-gold'
+                  }`}
+                >
+                  <Zap className="h-4 w-4" />
+                  Clãs
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       </nav>
