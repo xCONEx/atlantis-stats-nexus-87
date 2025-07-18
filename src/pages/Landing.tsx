@@ -72,7 +72,7 @@ const Landing = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <Zap className="h-8 w-8 text-runescape-gold" />
+              <img src="/icon/2logo.png" alt="Logo Atlantis" className="h-8 w-8" />
               <div>
                 <h1 className="text-2xl font-cinzel font-bold text-runescape-gold">
                   Atlantis Stats
