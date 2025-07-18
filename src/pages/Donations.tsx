@@ -7,6 +7,9 @@ import Layout from "@/components/Layout";
 import DonationModal from "@/components/DonationModal";
 import { supabase } from "@/integrations/supabase/client";
 import PlayerDonationsModal from "@/components/PlayerDonationsModal";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 
 interface PlayerDonationSummary {
   player_id: string;
@@ -48,6 +51,10 @@ const Donations = () => {
   const [playerDonations, setPlayerDonations] = useState<PlayerDonationSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPlayer, setSelectedPlayer] = useState<{ player_id: string; player_name: string } | null>(null);
+  const { userRole } = useAuth();
+  const { toast } = useToast();
+  const [deleteGhost, setDeleteGhost] = useState<string | null>(null);
+  const [deletingGhost, setDeletingGhost] = useState(false);
 
   useEffect(() => {
     const fetchPlayerDonations = async () => {
@@ -87,6 +94,20 @@ const Donations = () => {
     fetchPlayerDonations();
     // eslint-disable-next-line
   }, [showDonationModal, searchTerm]);
+
+  const handleDeleteGhost = async () => {
+    if (!deleteGhost) return;
+    setDeletingGhost(true);
+    const { error } = await supabase.from('donations').delete().eq('player_name', deleteGhost).is('player_id', null);
+    if (!error) {
+      setPlayerDonations((prev) => prev.filter((p) => p.player_name !== deleteGhost));
+      toast({ title: 'Usuário fantasma removido', description: 'Todas as doações desse nome foram excluídas.', variant: 'default' });
+    } else {
+      toast({ title: 'Erro ao remover', description: error.message, variant: 'destructive' });
+    }
+    setDeletingGhost(false);
+    setDeleteGhost(null);
+  };
 
   return (
     <Layout>
@@ -154,7 +175,14 @@ const Donations = () => {
                       return (
                         <Card key={player.player_name} className="shadow-md opacity-60">
                           <CardHeader>
-                            <CardTitle className="truncate">{cleanPlayerName(player.player_name)}</CardTitle>
+                            <div className="flex items-center justify-between">
+                              <CardTitle className="truncate">{cleanPlayerName(player.player_name)}</CardTitle>
+                              {userRole === 'admin' && (
+                                <Button variant="destructive" size="sm" onClick={() => setDeleteGhost(player.player_name)} disabled={deletingGhost}>
+                                  Remover
+                                </Button>
+                              )}
+                            </div>
                             <CardDescription>Total doado</CardDescription>
                           </CardHeader>
                           <CardContent>
@@ -187,6 +215,18 @@ const Donations = () => {
           onClose={() => setSelectedPlayer(null)}
         />
       )}
+      <AlertDialog open={!!deleteGhost} onOpenChange={(open) => !open && setDeleteGhost(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover usuário fantasma</AlertDialogTitle>
+          </AlertDialogHeader>
+          <div>Tem certeza que deseja remover todas as doações deste usuário? Esta ação não pode ser desfeita.</div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingGhost} onClick={() => setDeleteGhost(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction disabled={deletingGhost} onClick={handleDeleteGhost}>Remover</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Layout>
   );
 };
