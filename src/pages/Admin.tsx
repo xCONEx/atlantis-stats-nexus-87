@@ -44,7 +44,6 @@ const AdminPage = () => {
   const [editingRole, setEditingRole] = useState<string | null>(null);
   const [roleDraft, setRoleDraft] = useState<string>('');
   const [fetching, setFetching] = useState(false);
-  const [migrating, setMigrating] = useState(false);
 
   // Login por e-mail restrito
   const handleEmailLogin = async (e: React.FormEvent) => {
@@ -70,10 +69,15 @@ const AdminPage = () => {
   const fetchUsers = async () => {
     setFetching(true);
     try {
-      // Buscar apenas user_roles
+      // Buscar user_roles com dados dos perfis dos usuários
       let { data: userRoles, error: userRolesError } = await supabase
         .from('user_roles')
-        .select('user_id, role, clan_name')
+        .select(`
+          user_id, 
+          role, 
+          clan_name,
+          user_profiles!user_id(email, display_name)
+        `)
         .order('role', { ascending: false });
       
       if (userRolesError) {
@@ -83,30 +87,21 @@ const AdminPage = () => {
         return;
       }
 
+      console.log('Dados buscados:', userRoles);
+
       // Processar dados dos usuários
       const usersWithDetails = userRoles.map((userRole) => {
-        // Se for o usuário atual, usar dados do contexto
-        const isCurrentUser = user && user.id === userRole.user_id;
+        const profile = userRole.user_profiles;
+        console.log(`Usuário ${userRole.user_id}:`, profile);
         
-        if (isCurrentUser) {
-          const displayName = user.user_metadata?.full_name || 
-                             user.user_metadata?.name || 
-                             user.email || 
-                             'Usuário Atual';
-          return {
-            ...userRole,
-            displayName,
-            email: user.email
-          };
-        }
-        
-        // Para outros usuários, usar ID truncado
-        const displayName = `Usuário ${userRole.user_id.slice(0, 8)}...`;
-        
+        const displayName = profile?.display_name || 
+                           profile?.email || 
+                           `Usuário ${userRole.user_id.slice(0, 8)}...`;
+
         return {
           ...userRole,
           displayName,
-          email: null
+          email: profile?.email || null
         };
       });
 
@@ -168,45 +163,6 @@ const AdminPage = () => {
     }
     setEditingRole(null);
     setLoading(false);
-  };
-
-  // Função para popular user_profiles
-  const handlePopulateUserProfiles = async () => {
-    setMigrating(true);
-    try {
-      const response = await fetch('/api/populate-user-profiles', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        toast({ 
-          title: 'Migração concluída!', 
-          description: `${result.count} perfis de usuário foram criados.` 
-        });
-        // Recarregar dados
-        fetchUsers();
-      } else {
-        toast({ 
-          title: 'Erro na migração', 
-          description: result.error || 'Erro desconhecido', 
-          variant: 'destructive' 
-        });
-      }
-    } catch (error) {
-      console.error('Erro ao executar migração:', error);
-      toast({ 
-        title: 'Erro na migração', 
-        description: 'Falha ao conectar com o servidor', 
-        variant: 'destructive' 
-      });
-    } finally {
-      setMigrating(false);
-    }
   };
 
   // Proteção de rota
@@ -291,20 +247,6 @@ const AdminPage = () => {
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold text-runescape-gold">Painel de Administração do Sistema</h1>
         <div className="flex gap-3">
-          <Button 
-            variant="outline" 
-            onClick={handlePopulateUserProfiles}
-            disabled={migrating}
-          >
-            {migrating ? (
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-runescape-gold/30 border-t-runescape-gold rounded-full animate-spin"></div>
-                Migrando...
-              </div>
-            ) : (
-              'Migrar Usuários'
-            )}
-          </Button>
           <Button variant="outline" onClick={() => window.location.href = '/dashboard'}>
             Dashboard
           </Button>
