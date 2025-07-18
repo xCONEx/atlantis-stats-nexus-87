@@ -52,17 +52,7 @@ const AdminPage = () => {
   const fetchUsers = async () => {
     setFetching(true);
     try {
-      // Usar a API para buscar dados completos dos usuários
-      const response = await fetch('/api/admin-users');
-      if (!response.ok) {
-        throw new Error('Erro ao buscar usuários');
-      }
-      
-      const { users } = await response.json();
-      setUsers(users);
-    } catch (error) {
-      console.error('Erro ao buscar usuários:', error);
-      // Fallback: buscar apenas user_roles
+      // Buscar apenas user_roles
       let { data: userRoles, error: userRolesError } = await supabase
         .from('user_roles')
         .select('user_id, role, clan_name')
@@ -75,12 +65,11 @@ const AdminPage = () => {
         return;
       }
 
-      // Para cada user_role, criar dados básicos
+      // Processar dados dos usuários
       const usersWithDetails = userRoles.map((userRole) => {
-        // Se for o usuário atual, usar os dados disponíveis
+        // Se for o usuário atual, usar dados do contexto
         const isCurrentUser = user && user.id === userRole.user_id;
         
-        // Para o usuário atual, usar dados do contexto
         if (isCurrentUser) {
           const displayName = user.user_metadata?.full_name || 
                              user.user_metadata?.name || 
@@ -93,15 +82,20 @@ const AdminPage = () => {
           };
         }
         
-        // Para outros usuários, usar ID truncado como fallback
+        // Para outros usuários, usar email se disponível ou ID truncado
+        const displayName = `Usuário ${userRole.user_id.slice(0, 8)}...`;
+        
         return {
           ...userRole,
-          displayName: `Usuário ${userRole.user_id.slice(0, 8)}...`,
-          email: null
+          displayName,
+          email: null // Não temos acesso ao email de outros usuários
         };
       });
 
       setUsers(usersWithDetails);
+    } catch (error) {
+      console.error('Erro ao buscar usuários:', error);
+      setUsers([]);
     }
     setFetching(false);
   };
