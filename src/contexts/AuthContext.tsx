@@ -129,11 +129,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast({ title: 'Erro', description: 'ID do Discord inválido. Faça login novamente com Discord.', variant: 'destructive' });
       return;
     }
-    // Upsert apenas com id e discord_id
-    await supabase.from('discord_links').upsert({
-      id: discordUser.id, // UUID do Supabase
+    // Upsert apenas se usuário autenticado (auth.uid())
+    const { data: sessionData } = await supabase.auth.getSession();
+    const authUid = sessionData?.session?.user?.id;
+    if (!authUid) {
+      console.error('Usuário não autenticado no Supabase!');
+      toast({ title: 'Erro', description: 'Usuário não autenticado.', variant: 'destructive' });
+      return;
+    }
+    // Upsert usando auth.uid() como id
+    const { error } = await supabase.from('discord_links').upsert({
+      id: authUid,
       discord_id: realDiscordId
     }, { onConflict: 'id' });
+    if (error) {
+      console.error('Erro ao fazer upsert em discord_links:', error);
+      toast({ title: 'Erro', description: 'Falha ao vincular Discord.', variant: 'destructive' });
+      return;
+    }
     toast({ title: 'Conta do Discord vinculada com sucesso!', description: 'Sua conta do Discord foi vinculada ao sistema.', variant: 'default' });
   };
 
