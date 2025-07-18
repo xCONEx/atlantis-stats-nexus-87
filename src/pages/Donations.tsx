@@ -169,11 +169,12 @@ const Donations = () => {
     setLoading(false);
   };
 
-  // Função para importar doações de um arquivo Excel
+  // Função para importar doações de um arquivo Excel (ajustada para o novo formato)
   const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setLoading(true);
+    const fantasmas: string[] = [];
     try {
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data, { type: "array" });
@@ -183,30 +184,59 @@ const Donations = () => {
       const { data: players } = await supabase
         .from('players')
         .select('id, username, display_name, is_active');
-      const donationsToInsert = rows.map((row) => {
-        const nome = (row["Nome do Jogador"] || "").toString().trim();
-        const valorStr = (row["Valor Total Doado"] || "0").toString().replace(/[^\d,\.]/g, '').replace(',', '.');
-        const valor = parseFloat(valorStr);
-        // Busca exata ou parcial (case-insensitive)
-        const player = players?.find(
-          (p) =>
-            p.is_active &&
-            (p.display_name?.toLowerCase() === nome.toLowerCase() ||
-              p.username?.toLowerCase() === nome.toLowerCase() ||
-              p.display_name?.toLowerCase().includes(nome.toLowerCase()) ||
-              p.username?.toLowerCase().includes(nome.toLowerCase()))
-        );
-        return {
-          player_id: player ? player.id : null,
-          player_name: nome,
-          amount: valor,
-          event: 'Importação Excel',
-          portals: 1,
-          date: new Date().toISOString().split('T')[0],
-          created_by: null,
-          created_by_email: 'import-excel',
-          notes: 'Importado via Excel'
-        };
+      const donationsToInsert: any[] = [];
+      rows.forEach((row) => {
+        const nome = (row["Jogador"] || "").toString().trim();
+        // PORTATEIS
+        const portateis = parseInt(row["PORTATEIS"] || "0", 10);
+        if (portateis > 0) {
+          const player = players?.find(
+            (p) =>
+              p.is_active &&
+              (p.display_name?.toLowerCase() === nome.toLowerCase() ||
+                p.username?.toLowerCase() === nome.toLowerCase() ||
+                p.display_name?.toLowerCase().includes(nome.toLowerCase()) ||
+                p.username?.toLowerCase().includes(nome.toLowerCase()))
+          );
+          if (!player) fantasmas.push(nome);
+          donationsToInsert.push({
+            player_id: player ? player.id : null,
+            player_name: nome,
+            amount: portateis,
+            event: 'PORTATEIS',
+            donation_type: 'portateis',
+            portals: 1,
+            date: new Date().toISOString().split('T')[0],
+            created_by: null,
+            created_by_email: 'import-excel',
+            description: 'Importado via Excel'
+          });
+        }
+        // Dinheiro (M)
+        const dinheiroM = parseInt(row["Dinheiro (M)"] || "0", 10);
+        if (dinheiroM > 0) {
+          const player = players?.find(
+            (p) =>
+              p.is_active &&
+              (p.display_name?.toLowerCase() === nome.toLowerCase() ||
+                p.username?.toLowerCase() === nome.toLowerCase() ||
+                p.display_name?.toLowerCase().includes(nome.toLowerCase()) ||
+                p.username?.toLowerCase().includes(nome.toLowerCase()))
+          );
+          if (!player) fantasmas.push(nome);
+          donationsToInsert.push({
+            player_id: player ? player.id : null,
+            player_name: nome,
+            amount: dinheiroM * 1000000,
+            event: 'Moeda',
+            donation_type: 'moeda',
+            portals: 1,
+            date: new Date().toISOString().split('T')[0],
+            created_by: null,
+            created_by_email: 'import-excel',
+            description: 'Importado via Excel'
+          });
+        }
       });
       // Inserir em lotes de 100 para evitar timeout
       for (let i = 0; i < donationsToInsert.length; i += 100) {
@@ -214,7 +244,12 @@ const Donations = () => {
         const { error } = await supabase.from('donations').insert(batch);
         if (error) throw error;
       }
-      toast({ title: 'Importação concluída', description: 'Doações importadas com sucesso!', variant: 'default' });
+      let msg = 'Doações importadas com sucesso!';
+      if (fantasmas.length > 0) {
+        const unicos = Array.from(new Set(fantasmas));
+        msg += `\nJogadores não encontrados (fantasmas):\n${unicos.join(', ')}`;
+      }
+      toast({ title: 'Importação concluída', description: msg, variant: 'default' });
       setShowDonationModal(false); // Fecha modal se aberto
       setCurrentPage(1); // Volta para primeira página
     } catch (err: any) {
