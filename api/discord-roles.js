@@ -1,9 +1,33 @@
 import { supabase } from '../src/integrations/supabase/client';
+import axios from 'axios';
 
-const ENV = process.env.DISCORD_ENV || 'production';
-const BOT_TOKEN = ENV === 'test'
-  ? process.env.DISCORD_BOT_TOKEN_TEST || 'SEU_TOKEN_TESTE_AQUI'
-  : process.env.DISCORD_BOT_TOKEN_PROD || process.env.DISCORD_BOT_TOKEN || 'SEU_TOKEN_AQUI';
+const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
+
+const ROLE_IDS = {
+  Generoso: "1395811213144887317",
+  Milionario: "1395811376605167847",
+  'Bilionário': "1395811441982050509",
+  Filantropo: "1395811476928856144",
+};
+const GUILD_ID = "664599420528099338";
+
+function getRoleIdByDonation(total) {
+  if (total >= 2500000000) return ROLE_IDS.Filantropo;
+  if (total >= 1000000000) return ROLE_IDS['Bilionário'];
+  if (total >= 500000000) return ROLE_IDS.Milionario;
+  if (total >= 250000000) return ROLE_IDS.Generoso;
+  return null;
+}
+
+async function assignRoleToUser(discord_id, role_id) {
+  const url = `https://discord.com/api/v10/guilds/${GUILD_ID}/members/${discord_id}/roles/${role_id}`;
+  await axios.put(url, {}, {
+    headers: {
+      'Authorization': `Bot ${BOT_TOKEN}`,
+      'Content-Type': 'application/json'
+    }
+  });
+}
 
 export default async function handler(req, res) {
   // Autenticação simples via token
@@ -41,11 +65,21 @@ export default async function handler(req, res) {
 
   // Determinar cargo
   let cargo = 'Membro';
-  if (total >= 5000000000) cargo = 'Personalizado 👑';
-  else if (total >= 2500000000) cargo = 'Filantropo 🪙';
-  else if (total >= 1000000000) cargo = 'Bilionário 💷';
-  else if (total >= 500000000) cargo = 'Milionário 💵';
-  else if (total >= 250000000) cargo = 'Generoso 💰';
+  let role_id = null;
+  if (total >= 2500000000) { cargo = 'Filantropo 🪙'; role_id = ROLE_IDS.Filantropo; }
+  else if (total >= 1000000000) { cargo = 'Bilionário 💷'; role_id = ROLE_IDS['Bilionário']; }
+  else if (total >= 500000000) { cargo = 'Milionário 💵'; role_id = ROLE_IDS.Milionario; }
+  else if (total >= 250000000) { cargo = 'Generoso 💰'; role_id = ROLE_IDS.Generoso; }
+
+  // Se tiver role_id, atribui o cargo no Discord
+  if (role_id) {
+    try {
+      await assignRoleToUser(discord_id, role_id);
+    } catch (err) {
+      await logRequest(discord_id, 'discord_api_error', { action, cargo, total, role_id, error: err.response?.data || err.message });
+      return res.status(500).json({ error: 'Erro ao atribuir cargo no Discord', details: err.response?.data || err.message });
+    }
+  }
 
   // Logar requisição
   await logRequest(discord_id, 'success', { action, cargo, total });
