@@ -69,7 +69,7 @@ const AdminPage = () => {
   const fetchUsers = async () => {
     setFetching(true);
     try {
-      // Buscar user_roles com dados dos perfis dos usuários
+      // Tentar buscar com user_profiles primeiro
       let { data: userRoles, error: userRolesError } = await supabase
         .from('user_roles')
         .select(`
@@ -81,23 +81,61 @@ const AdminPage = () => {
         .order('role', { ascending: false });
       
       if (userRolesError) {
-        console.error('Erro ao buscar user_roles:', userRolesError);
-        setUsers([]);
-        setFetching(false);
-        return;
+        console.log('user_profiles não disponível, usando fallback:', userRolesError);
+        // Fallback: buscar apenas user_roles
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('user_roles')
+          .select('user_id, role, clan_name')
+          .order('role', { ascending: false });
+        
+        if (fallbackError) {
+          console.error('Erro ao buscar user_roles:', fallbackError);
+          setUsers([]);
+          setFetching(false);
+          return;
+        }
+        
+        userRoles = fallbackData;
       }
 
       // Processar dados dos usuários
       const usersWithDetails = userRoles.map((userRole) => {
-        const profile = userRole.user_profiles;
-        const displayName = profile?.display_name || 
-                           profile?.email || 
-                           `Usuário ${userRole.user_id.slice(0, 8)}...`;
+        // Se temos dados de user_profiles
+        if (userRole.user_profiles) {
+          const profile = userRole.user_profiles;
+          const displayName = profile?.display_name || 
+                             profile?.email || 
+                             `Usuário ${userRole.user_id.slice(0, 8)}...`;
 
+          return {
+            ...userRole,
+            displayName,
+            email: profile?.email || null
+          };
+        }
+        
+        // Fallback: se for o usuário atual, usar dados do contexto
+        const isCurrentUser = user && user.id === userRole.user_id;
+        
+        if (isCurrentUser) {
+          const displayName = user.user_metadata?.full_name || 
+                             user.user_metadata?.name || 
+                             user.email || 
+                             'Usuário Atual';
+          return {
+            ...userRole,
+            displayName,
+            email: user.email
+          };
+        }
+        
+        // Para outros usuários, usar ID truncado
+        const displayName = `Usuário ${userRole.user_id.slice(0, 8)}...`;
+        
         return {
           ...userRole,
           displayName,
-          email: profile?.email || null
+          email: null
         };
       });
 
