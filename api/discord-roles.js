@@ -40,19 +40,34 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Método não permitido' });
   }
 
-  const { discord_id, action } = req.body;
-  if (!discord_id) {
-    return res.status(400).json({ error: 'discord_id obrigatório' });
+  const { discord_id, id: uuid, action } = req.body;
+
+  let real_discord_id = discord_id;
+  // Se não veio o discord_id real, mas veio o UUID, buscar o discord_id real
+  if (!real_discord_id && uuid) {
+    const { data: linkByUuid, error: uuidError } = await supabase
+      .from('discord_links')
+      .select('discord_id')
+      .eq('id', uuid)
+      .single();
+    if (uuidError || !linkByUuid) {
+      await logRequest(uuid, 'not_found_uuid', req.body);
+      return res.status(404).json({ error: 'Associação não encontrada pelo UUID' });
+    }
+    real_discord_id = linkByUuid.discord_id;
+  }
+  if (!real_discord_id) {
+    return res.status(400).json({ error: 'discord_id ou id (uuid) obrigatório' });
   }
 
   // Buscar associação Discord ↔ Nick
   const { data: link, error: linkError } = await supabase
     .from('discord_links')
     .select('username, player_id')
-    .eq('discord_id', discord_id)
+    .eq('discord_id', real_discord_id)
     .single();
   if (linkError || !link) {
-    await logRequest(discord_id, 'not_found', req.body);
+    await logRequest(real_discord_id, 'not_found', req.body);
     return res.status(404).json({ error: 'Associação não encontrada' });
   }
 
@@ -74,15 +89,15 @@ export default async function handler(req, res) {
   // Se tiver role_id, atribui o cargo no Discord
   if (role_id) {
     try {
-      await assignRoleToUser(discord_id, role_id);
+      await assignRoleToUser(real_discord_id, role_id);
     } catch (err) {
-      await logRequest(discord_id, 'discord_api_error', { action, cargo, total, role_id, error: err.response?.data || err.message });
+      await logRequest(real_discord_id, 'discord_api_error', { action, cargo, total, role_id, error: err.response?.data || err.message });
       return res.status(500).json({ error: 'Erro ao atribuir cargo no Discord', details: err.response?.data || err.message });
     }
   }
 
   // Logar requisição
-  await logRequest(discord_id, 'success', { action, cargo, total });
+  await logRequest(real_discord_id, 'success', { action, cargo, total });
 
   return res.status(200).json({
     username: link.username,
