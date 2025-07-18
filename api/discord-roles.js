@@ -1,4 +1,4 @@
-import { supabase } from '../src/integrations/supabase/client';
+import { supabase } from '../src/integrations/supabase/client.js';
 import axios from 'axios';
 
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
