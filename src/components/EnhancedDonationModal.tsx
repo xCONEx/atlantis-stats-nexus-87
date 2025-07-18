@@ -11,6 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import axios from 'axios';
+import { calcularCargo } from '@/lib/utils';
 
 interface Player {
   id: string;
@@ -133,6 +134,14 @@ const EnhancedDonationModal = ({ open, onClose, onSave, donation, editMode = fal
     setLoading(true);
 
     try {
+      // Buscar total antes da alteração
+      const { data: donationsBefore } = await supabase
+        .from('donations')
+        .select('amount')
+        .eq('player_id', selectedPlayer.id);
+      const totalBefore = donationsBefore ? donationsBefore.reduce((acc, d) => acc + (d.amount || 0), 0) : 0;
+      const cargoAntes = calcularCargo(totalBefore);
+
       const donationData = {
         player_id: selectedPlayer.id,
         amount: formData.amount,
@@ -155,14 +164,22 @@ const EnhancedDonationModal = ({ open, onClose, onSave, donation, editMode = fal
       const { error } = supabaseResult;
       if (error) throw error;
 
+      // Buscar total depois da alteração
+      const { data: donationsAfter } = await supabase
+        .from('donations')
+        .select('amount')
+        .eq('player_id', selectedPlayer.id);
+      const totalAfter = donationsAfter ? donationsAfter.reduce((acc, d) => acc + (d.amount || 0), 0) : 0;
+      const cargoDepois = calcularCargo(totalAfter);
+
       // Buscar discord_id do usuário
       const { data: link } = await supabase
         .from('discord_links')
         .select('discord_id')
         .eq('player_id', selectedPlayer.id)
         .single();
-      if (link && link.discord_id) {
-        // Chamar endpoint para atualizar cargo
+      if (link && link.discord_id && cargoAntes !== cargoDepois) {
+        // Chamar endpoint para atualizar cargo SÓ se mudou
         try {
           await axios.post('/api/discord-roles', {
             discord_id: link.discord_id,
