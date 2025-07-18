@@ -52,7 +52,7 @@ const AdminPage = () => {
   const fetchUsers = async () => {
     setFetching(true);
     try {
-      // Primeiro buscar user_roles
+      // Buscar apenas user_roles - dados básicos
       let { data: userRoles, error: userRolesError } = await supabase
         .from('user_roles')
         .select('user_id, role, clan_name')
@@ -65,30 +65,12 @@ const AdminPage = () => {
         return;
       }
 
-      // Para cada user_role, buscar dados do usuário e discord
-      const usersWithDetails = await Promise.all(
-        userRoles.map(async (userRole) => {
-          // Buscar dados do usuário
-          const { data: userData } = await supabase
-            .from('users')
-            .select('email')
-            .eq('id', userRole.user_id)
-            .single();
-
-          // Buscar dados do Discord
-          const { data: discordData } = await supabase
-            .from('discord_links')
-            .select('username, discord_id')
-            .eq('discord_id', userRole.user_id)
-            .single();
-
-          return {
-            ...userRole,
-            users: userData,
-            discord_links: discordData
-          };
-        })
-      );
+      // Usar apenas os dados de user_roles
+      const usersWithDetails = userRoles.map((userRole) => ({
+        ...userRole,
+        users: null, // Não temos acesso aos dados do usuário
+        discord_links: null // Não temos acesso aos dados do Discord
+      }));
 
       setUsers(usersWithDetails);
     } catch (error) {
@@ -106,8 +88,12 @@ const AdminPage = () => {
 
   // Filtro de busca
   const filteredUsers = users.filter(u => {
-    const name = u.discord_links?.username || u.users?.email || '';
-    return name.toLowerCase().includes(search.toLowerCase());
+    const searchTerm = search.toLowerCase();
+    return (
+      u.user_id.toLowerCase().includes(searchTerm) ||
+      u.role.toLowerCase().includes(searchTerm) ||
+      (u.clan_name && u.clan_name.toLowerCase().includes(searchTerm))
+    );
   });
 
   // Edição de cargo
@@ -225,17 +211,17 @@ const AdminPage = () => {
   return (
     <div className="max-w-5xl mx-auto mt-10 p-6 bg-gradient-to-br from-[#181c24] to-[#23283a] rounded-xl shadow-lg border border-runescape-gold/30">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold text-runescape-gold">Painel de Administração do Clã</h1>
+        <h1 className="text-3xl font-bold text-runescape-gold">Painel de Administração do Sistema</h1>
         <Button variant="outline" onClick={signOut}>Sair</Button>
       </div>
       <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <Input
-          placeholder="Buscar por nome ou e-mail..."
+          placeholder="Buscar por ID, cargo ou clã..."
           value={search}
           onChange={e => setSearch(e.target.value)}
           className="w-full md:w-80"
         />
-        <span className="text-muted-foreground text-sm">Total: {filteredUsers.length}</span>
+        <span className="text-muted-foreground text-sm">Total: {filteredUsers.length} usuários</span>
       </div>
       <div className="overflow-x-auto rounded-lg shadow border border-runescape-gold/10 bg-card">
         {fetching ? (
@@ -247,17 +233,16 @@ const AdminPage = () => {
           <table className="min-w-full divide-y divide-runescape-gold/10">
             <thead className="bg-runescape-gold/10">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-runescape-gold">Nome</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-runescape-gold">E-mail</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-runescape-gold">Cargo</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-runescape-gold">ID do Usuário</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-runescape-gold">Cargo no Sistema</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-runescape-gold">Clã</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-runescape-gold">Ações</th>
               </tr>
             </thead>
             <tbody className="bg-card divide-y divide-runescape-gold/10">
               {filteredUsers.map((u) => (
                 <tr key={u.user_id} className="hover:bg-runescape-gold/5 transition">
-                  <td className="px-4 py-3 font-medium text-runescape-gold">{u.discord_links?.username || '-'}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{u.users?.email || '-'}</td>
+                  <td className="px-4 py-3 font-mono text-sm text-muted-foreground">{u.user_id}</td>
                   <td className="px-4 py-3">
                     {editingRole === u.user_id ? (
                       <Select value={roleDraft} onValueChange={setRoleDraft}>
@@ -274,6 +259,7 @@ const AdminPage = () => {
                       <span className="capitalize font-semibold text-runescape-gold">{roleLabels[u.role] || u.role}</span>
                     )}
                   </td>
+                  <td className="px-4 py-3 text-muted-foreground">{u.clan_name || '-'}</td>
                   <td className="px-4 py-3">
                     {editingRole === u.user_id ? (
                       <div className="flex gap-2">
@@ -297,7 +283,7 @@ const AdminPage = () => {
       </div>
       <div className="mt-8 text-xs text-muted-foreground text-center">
         Todas as alterações de cargo são registradas em log de auditoria.<br/>
-        Painel exclusivo para administração do clã Atlantis.
+        Painel exclusivo para administração de usuários do sistema Atlantis.
       </div>
     </div>
   );
