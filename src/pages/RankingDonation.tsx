@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { calcularCargo } from "@/lib/utils";
 
 interface DonationRanking {
   player_id?: string | null;
@@ -150,7 +151,7 @@ const RankingDonation = () => {
                             #{index + 1}
                           </td>
                           <td className="px-4 py-3 font-medium">
-                            {donation.player_name}
+                            {donation.player_name} {(() => { const cargo = calcularCargo(donation.total_amount); return cargo.emoji ? <span title={cargo.titulo} style={{marginLeft:4}}>{cargo.emoji}</span> : null; })()}
                           </td>
                           <td className="px-4 py-3 text-right font-bold text-runescape-blue">
                             {formatAmount(donation.total_amount)}
