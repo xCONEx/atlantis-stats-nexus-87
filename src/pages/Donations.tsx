@@ -69,6 +69,10 @@ const Donations = () => {
   const [selectedSheets, setSelectedSheets] = useState<string[]>([]);
   const [showSheetModal, setShowSheetModal] = useState(false);
   const [pendingExcelFile, setPendingExcelFile] = useState<File | null>(null);
+  const [showEditGhostModal, setShowEditGhostModal] = useState(false);
+  const [selectedGhostPlayer, setSelectedGhostPlayer] = useState<string>("");
+  const [editingGhost, setEditingGhost] = useState(false);
+  const [availablePlayers, setAvailablePlayers] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchPlayerDonations = async () => {
@@ -362,6 +366,53 @@ const Donations = () => {
     setLoading(false);
   };
 
+  // Função para carregar jogadores disponíveis
+  const loadAvailablePlayers = async () => {
+    const { data } = await supabase
+      .from('players')
+      .select('id, username, display_name, is_active')
+      .eq('is_active', true);
+    setAvailablePlayers(data || []);
+  };
+
+  // Função para editar jogador fantasma
+  const handleEditGhostPlayer = async () => {
+    if (!selectedGhostPlayer) return;
+    setEditingGhost(true);
+    try {
+      // Buscar todas as doações do jogador fantasma
+      const { data: donations } = await supabase
+        .from('donations')
+        .select('id')
+        .eq('player_name', selectedGhostPlayer)
+        .is('player_id', null);
+      
+      if (donations && donations.length > 0) {
+        // Atualizar todas as doações para o jogador selecionado
+        const { error } = await supabase
+          .from('donations')
+          .update({ 
+            player_id: selectedGhostPlayer,
+            player_name: null // Limpar o nome fantasma
+          })
+          .eq('player_name', selectedGhostPlayer)
+          .is('player_id', null);
+        
+        if (error) {
+          toast({ title: 'Erro ao editar', description: error.message, variant: 'destructive' });
+        } else {
+          toast({ title: 'Jogador editado', description: 'Doações linkadas com sucesso!', variant: 'default' });
+          setShowEditGhostModal(false);
+          setSelectedGhostPlayer("");
+          fetchPlayerDonations(); // Recarregar dados
+        }
+      }
+    } catch (err: any) {
+      toast({ title: 'Erro ao editar', description: err.message || 'Erro desconhecido', variant: 'destructive' });
+    }
+    setEditingGhost(false);
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -442,9 +493,22 @@ const Donations = () => {
                             <div className="flex items-center justify-between">
                               <CardTitle className="truncate">{cleanPlayerName(player.player_name)}</CardTitle>
                               {userRole === 'admin' && (
-                                <Button variant="destructive" size="sm" onClick={() => setDeleteGhost(player.player_name)} disabled={deletingGhost}>
-                                  Remover
-                                </Button>
+                                <div className="flex gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={async () => {
+                                      await loadAvailablePlayers();
+                                      setSelectedGhostPlayer(player.player_name || "");
+                                      setShowEditGhostModal(true);
+                                    }}
+                                  >
+                                    Editar
+                                  </Button>
+                                  <Button variant="destructive" size="sm" onClick={() => setDeleteGhost(player.player_name)} disabled={deletingGhost}>
+                                    Remover
+                                  </Button>
+                                </div>
                               )}
                             </div>
                             <CardDescription>Total doado</CardDescription>
@@ -558,6 +622,37 @@ const Donations = () => {
             <AlertDialogFooter>
               <AlertDialogCancel onClick={() => setShowSheetModal(false)}>Cancelar</AlertDialogCancel>
               <AlertDialogAction onClick={handleImportSelectedSheets} disabled={selectedSheets.length === 0}>Importar</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+      {/* Modal de edição de jogador fantasma */}
+      {showEditGhostModal && (
+        <AlertDialog open={showEditGhostModal} onOpenChange={setShowEditGhostModal}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Linkar jogador fantasma</AlertDialogTitle>
+            </AlertDialogHeader>
+            <div className="space-y-4">
+              <p>Selecione o jogador correto para linkar as doações:</p>
+              <select
+                className="w-full bg-[#181c24] text-runescape-gold border-2 border-border focus:border-runescape-gold rounded-md px-3 py-2"
+                value={selectedGhostPlayer}
+                onChange={(e) => setSelectedGhostPlayer(e.target.value)}
+              >
+                <option value="">Selecione um jogador</option>
+                {availablePlayers.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {cleanPlayerName(p.display_name || p.username)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setShowEditGhostModal(false)}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleEditGhostPlayer} disabled={!selectedGhostPlayer || editingGhost}>
+                {editingGhost ? 'Editando...' : 'Linkar'}
+              </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
