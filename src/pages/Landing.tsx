@@ -200,7 +200,7 @@ const Landing = () => {
               </div>
               
               {/* Remover botões de criar conta e começar agora */}
-              <Link to="/register">
+              <Link to="/login">
                 <Button className="btn-runescape text-xl py-4 px-8">
                   <Zap className="h-5 w-5" />
                   Criar Conta Gratuita
