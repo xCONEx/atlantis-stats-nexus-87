@@ -14,6 +14,7 @@ import Donations from "./pages/Donations";
 import Clans from "./pages/Clans";
 import NotFound from "./pages/NotFound";
 import AdminPage from './pages/Admin';
+import RankingDonation from './pages/RankingDonation';
 
 const queryClient = new QueryClient();
 
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/ranking" element={<RankingDonation />} />
             <Route path="/dashboard" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/players" element={<ProtectedRoute><Players /></ProtectedRoute>} />
             <Route path="/donations" element={<ProtectedRoute><Donations /></ProtectedRoute>} />
