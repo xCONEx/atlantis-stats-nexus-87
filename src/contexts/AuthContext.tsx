@@ -54,7 +54,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { toast } = useToast();
 
   // Função para associar Discord ID ao nick do jogo
-  const associateDiscordToPlayer = async (discordId: string) => {
+  const associateDiscordToPlayer = async () => {
     // Buscar membros dos clãs
     const [atlantis, argus] = await Promise.all([
       runescapeApi.getAtlantisClanMembers(),
@@ -116,7 +116,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (session?.user) {
           setTimeout(() => {
             fetchUserRole(session.user.id);
-            associateDiscordToPlayer(session.user.id);
+            associateDiscordToPlayer();
             fetchRsUsername(session.user.id);
           }, 0);
           // Desativar temporariamente o modal de linkar conta para testes
@@ -142,7 +142,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(session?.user ?? null);
       if (session?.user) {
         await fetchUserRole(session.user.id);
-        associateDiscordToPlayer(session.user.id);
+        associateDiscordToPlayer();
         fetchRsUsername(session.user.id);
         // Desativar temporariamente o modal de linkar conta para testes
         setShowLinkModal(false);
