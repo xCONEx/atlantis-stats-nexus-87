@@ -11,6 +11,13 @@ const ROLE_IDS = {
 };
 const GUILD_ID = "664599420528099338";
 
+const DONATION_ROLE_IDS = [
+  "1395811213144887317", // Generoso
+  "1395811376605167847", // Milionario
+  "1395811441982050509", // Bilionário
+  "1395811476928856144", // Filantropo
+];
+
 function getRoleIdByDonation(total) {
   if (total >= 2500000000) return ROLE_IDS.Filantropo;
   if (total >= 1000000000) return ROLE_IDS['Bilionário'];
@@ -27,6 +34,24 @@ async function assignRoleToUser(discord_id, role_id) {
       'Content-Type': 'application/json'
     }
   });
+}
+
+async function removeDonationRoles(discord_id) {
+  for (const role_id of DONATION_ROLE_IDS) {
+    try {
+      const url = `https://discord.com/api/v10/guilds/${GUILD_ID}/members/${discord_id}/roles/${role_id}`;
+      await axios.delete(url, {
+        headers: {
+          'Authorization': `Bot ${BOT_TOKEN}`,
+          'Content-Type': 'application/json'
+        }
+      });
+    } catch (err) {
+      if (err.response && err.response.status !== 404) {
+        console.error(`Erro ao remover cargo ${role_id}:`, err.response?.data || err.message);
+      }
+    }
+  }
 }
 
 export default async function handler(req, res) {
@@ -85,6 +110,9 @@ export default async function handler(req, res) {
   else if (total >= 1000000000) { cargo = 'Bilionário 💷'; role_id = ROLE_IDS['Bilionário']; }
   else if (total >= 500000000) { cargo = 'Milionário 💵'; role_id = ROLE_IDS.Milionario; }
   else if (total >= 250000000) { cargo = 'Generoso 💰'; role_id = ROLE_IDS.Generoso; }
+
+  // Sempre remover todos os cargos de doação antes de adicionar o novo
+  await removeDonationRoles(real_discord_id);
 
   // Se tiver role_id, atribui o cargo no Discord
   if (role_id) {
