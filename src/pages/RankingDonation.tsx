@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
 interface DonationRanking {
+  player_id?: string | null;
   player_name: string;
   total_amount: number;
 }
@@ -23,21 +24,26 @@ const RankingDonation = () => {
     try {
       const { data, error } = await supabase
         .from('donations')
-        .select('player_name, amount')
-        .order('amount', { ascending: false });
+        .select('player_id, player_name, amount');
 
       if (error) throw error;
 
-      // Agrupar por jogador e somar doações
-      const groupedDonations: Record<string, number> = {};
+      // Agrupar por player_id (quando existir), senão por player_name
+      const groupedDonations: Record<string, { player_id: string | null, player_name: string, total_amount: number }> = {};
       data?.forEach((donation: any) => {
-        const playerName = donation.player_name || 'Jogador';
-        groupedDonations[playerName] = (groupedDonations[playerName] || 0) + (donation.amount || 0);
+        const key = donation.player_id || donation.player_name;
+        if (!groupedDonations[key]) {
+          groupedDonations[key] = {
+            player_id: donation.player_id,
+            player_name: donation.player_name || 'Jogador',
+            total_amount: 0,
+          };
+        }
+        groupedDonations[key].total_amount += donation.amount || 0;
       });
 
       // Converter para array e ordenar por total
-      const ranking = Object.entries(groupedDonations)
-        .map(([player_name, total_amount]) => ({ player_name, total_amount }))
+      const ranking = Object.values(groupedDonations)
         .sort((a, b) => b.total_amount - a.total_amount);
 
       setDonations(ranking);
@@ -137,7 +143,7 @@ const RankingDonation = () => {
                     ) : (
                       donations.map((donation, index) => (
                         <tr
-                          key={donation.player_name}
+                          key={donation.player_id || donation.player_name}
                           className={index % 2 === 0 ? "bg-[#23283a] text-runescape-gold" : "bg-[#181c24] text-white"}
                         >
                           <td className="px-4 py-3 font-bold">
