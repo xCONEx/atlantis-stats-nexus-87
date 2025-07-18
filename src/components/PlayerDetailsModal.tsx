@@ -100,37 +100,11 @@ const PlayerDetailsModal = ({ player, open, onClose }: PlayerDetailsModalProps) 
     return Object.keys(playerStats.skills).filter(skill => !combatSkills.includes(skill));
   };
 
-  // Adicionar mapeamento de imagens das skills da wiki
-  const SKILL_IMAGES: { [key: string]: string } = {
-    Attack: "https://secure.runescape.com/m=rs3_static/images/skills/attack.png",
-    Defence: "https://secure.runescape.com/m=rs3_static/images/skills/defence.png",
-    Strength: "https://secure.runescape.com/m=rs3_static/images/skills/strength.png",
-    Constitution: "https://secure.runescape.com/m=rs3_static/images/skills/constitution.png",
-    Ranged: "https://secure.runescape.com/m=rs3_static/images/skills/ranged.png",
-    Prayer: "https://secure.runescape.com/m=rs3_static/images/skills/prayer.png",
-    Magic: "https://secure.runescape.com/m=rs3_static/images/skills/magic.png",
-    Cooking: "https://secure.runescape.com/m=rs3_static/images/skills/cooking.png",
-    Woodcutting: "https://secure.runescape.com/m=rs3_static/images/skills/woodcutting.png",
-    Fletching: "https://secure.runescape.com/m=rs3_static/images/skills/fletching.png",
-    Fishing: "https://secure.runescape.com/m=rs3_static/images/skills/fishing.png",
-    Firemaking: "https://secure.runescape.com/m=rs3_static/images/skills/firemaking.png",
-    Crafting: "https://secure.runescape.com/m=rs3_static/images/skills/crafting.png",
-    Smithing: "https://secure.runescape.com/m=rs3_static/images/skills/smithing.png",
-    Mining: "https://secure.runescape.com/m=rs3_static/images/skills/mining.png",
-    Herblore: "https://secure.runescape.com/m=rs3_static/images/skills/herblore.png",
-    Agility: "https://secure.runescape.com/m=rs3_static/images/skills/agility.png",
-    Thieving: "https://secure.runescape.com/m=rs3_static/images/skills/thieving.png",
-    Slayer: "https://secure.runescape.com/m=rs3_static/images/skills/slayer.png",
-    Farming: "https://secure.runescape.com/m=rs3_static/images/skills/farming.png",
-    Runecrafting: "https://secure.runescape.com/m=rs3_static/images/skills/runecrafting.png",
-    Hunter: "https://secure.runescape.com/m=rs3_static/images/skills/hunter.png",
-    Construction: "https://secure.runescape.com/m=rs3_static/images/skills/construction.png",
-    Summoning: "https://secure.runescape.com/m=rs3_static/images/skills/summoning.png",
-    Dungeoneering: "https://secure.runescape.com/m=rs3_static/images/skills/dungeoneering.png",
-    Divination: "https://secure.runescape.com/m=rs3_static/images/skills/divination.png",
-    Invention: "https://secure.runescape.com/m=rs3_static/images/skills/invention.png",
-    Archaeology: "https://secure.runescape.com/m=rs3_static/images/skills/archaeology.png",
-    Necromancy: "https://secure.runescape.com/m=rs3_static/images/skills/necromancy.png"
+  // Remover o mapeamento antigo de SKILL_IMAGES e criar um novo baseado em imports dinâmicos locais
+
+  // Função utilitária para obter o caminho do ícone local (agora em /public/skills)
+  const getSkillIcon = (skill: string) => {
+    return `/skills/${skill}.png`;
   };
 
   return (
@@ -260,7 +234,12 @@ const PlayerDetailsModal = ({ player, open, onClose }: PlayerDetailsModalProps) 
                           return (
                             <div key={skill} className="medieval-border p-4 text-center flex flex-col items-center">
                               <div className="flex items-center justify-center mb-1">
-                                <img src={SKILL_IMAGES[skill] || `https://secure.runescape.com/m=rs3_static/images/skills/${skill.toLowerCase()}.png`} alt={skill} className="w-7 h-7 mr-2" />
+                                <img
+                                  src={getSkillIcon(skill)}
+                                  alt={skill}
+                                  className="w-7 h-7 mr-2"
+                                  onError={e => (e.currentTarget.src = '/skills/default.png')}
+                                />
                                 <span className="font-medium text-runescape-gold">{skill}</span>
                               </div>
                               <div className="text-2xl font-bold mb-1">{data ? data.level : '-'}</div>
@@ -292,7 +271,12 @@ const PlayerDetailsModal = ({ player, open, onClose }: PlayerDetailsModalProps) 
                           return (
                             <div key={skill} className="medieval-border p-4 text-center flex flex-col items-center">
                               <div className="flex items-center justify-center mb-1">
-                                <img src={SKILL_IMAGES[skill] || `https://secure.runescape.com/m=rs3_static/images/skills/${skill.toLowerCase()}.png`} alt={skill} className="w-7 h-7 mr-2" />
+                                <img
+                                  src={getSkillIcon(skill)}
+                                  alt={skill}
+                                  className="w-7 h-7 mr-2"
+                                  onError={e => (e.currentTarget.src = '/skills/default.png')}
+                                />
                                 <span className="font-medium text-runescape-gold">{skill}</span>
                               </div>
                               <div className="text-2xl font-bold mb-1">{data ? data.level : '-'}</div>
