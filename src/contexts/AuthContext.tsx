@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import FirstLoginModal from "@/components/FirstLoginModal";
 import { runescapeApi } from '@/services/runescapeApi';
 import LinkDiscordModal from '@/components/LinkDiscordModal';
+import axios from 'axios';
 
 interface AuthContextType {
   user: User | null;
@@ -59,7 +60,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       runescapeApi.getAtlantisClanMembers(),
       runescapeApi.getAtlantisArgusClanMembers(),
     ]);
-    // Buscar nick do usuário pelo email/nome do Discord (ajustar se necessário)
     const discordUser = user;
     if (!discordUser) return;
     const displayName = discordUser.user_metadata?.full_name || discordUser.user_metadata?.name || discordUser.email;
@@ -67,14 +67,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Procurar nick nos clãs
     const matches = [...atlantis, ...argus].filter(m => m.name.toLowerCase() === displayName.toLowerCase());
     if (matches.length === 1) {
-      // Salvar associação com o id real do Discord
-      const realDiscordId = discordUser.identities?.find(i => i.provider === 'discord')?.id || discordUser.id;
+      // Buscar id real do Discord
+      const realDiscordId = Array.isArray(discordUser.identities)
+        ? discordUser.identities.find(i => i.provider === 'discord')?.id
+        : null;
+      if (!realDiscordId) {
+        console.error('ID real do Discord não encontrado no objeto de autenticação!');
+        return;
+      }
       const player = matches[0];
       await supabase.from('discord_links').upsert({
         discord_id: realDiscordId,
         username: player.name,
         player_id: null // pode buscar o id real se necessário
       }, { onConflict: 'discord_id,username' });
+      // Chamar endpoint para atualizar cargo no Discord
+      try {
+        await axios.post('https://atlantisstatus.vercel.app/api/discord-roles', {
+          discord_id: realDiscordId,
+          action: 'update_role'
+        });
+      } catch (err) {
+        console.error('Erro ao atualizar cargo no Discord após login:', err.response?.data || err.message);
+      }
     }
   };
 
