@@ -137,7 +137,7 @@ const DonationModal = ({ open, onClose, onSave, donation, editMode = false }: Do
       await axios.post('https://atlantisstatus.vercel.app/api/discord-roles', {
         discord_id: link.discord_id,
         action: 'update_role'
-      });
+      }); // sem header Authorization
       toast({ title: 'Cargo do Discord atualizado!', description: `Novo cargo: ${cargo}` });
     } catch (err) {
       console.error('Erro ao atualizar cargo no Discord:', err.response?.data || err.message);
@@ -428,6 +428,11 @@ const DonationModal = ({ open, onClose, onSave, donation, editMode = false }: Do
             </Button>
           </div>
         </form>
+        {donation && (
+          <div className="text-xs text-muted-foreground mt-4">
+            Adicionado por: {donation.created_by_email ? donation.created_by_email : (donation.created_by || 'Desconhecido')}
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
