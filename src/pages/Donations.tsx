@@ -65,6 +65,10 @@ const Donations = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [sheetNames, setSheetNames] = useState<string[]>([]);
+  const [selectedSheets, setSelectedSheets] = useState<string[]>([]);
+  const [showSheetModal, setShowSheetModal] = useState(false);
+  const [pendingExcelFile, setPendingExcelFile] = useState<File | null>(null);
 
   useEffect(() => {
     const fetchPlayerDonations = async () => {
@@ -213,77 +217,91 @@ const Donations = () => {
     setLoading(false);
   };
 
-  // Função para importar doações de um arquivo Excel (ajustada para o novo formato)
-  const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Função para abrir modal de seleção de abas
+  const handleExcelFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const data = await file.arrayBuffer();
+    const workbook = XLSX.read(data, { type: "array" });
+    setSheetNames(workbook.SheetNames);
+    setSelectedSheets(workbook.SheetNames);
+    setPendingExcelFile(file);
+    setShowSheetModal(true);
+  };
+
+  // Função para importar doações das abas selecionadas
+  const handleImportSelectedSheets = async () => {
+    if (!pendingExcelFile || selectedSheets.length === 0) {
+      setShowSheetModal(false);
+      return;
+    }
     setLoading(true);
     const fantasmas: string[] = [];
     try {
-      const data = await file.arrayBuffer();
+      const data = await pendingExcelFile.arrayBuffer();
       const workbook = XLSX.read(data, { type: "array" });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows: any[] = XLSX.utils.sheet_to_json(sheet);
-      console.log('Linhas lidas da planilha:', rows);
       // Buscar todos os jogadores ativos para associar pelo nome
       const { data: players } = await supabase
         .from('players')
         .select('id, username, display_name, is_active');
       const donationsToInsert: any[] = [];
-      rows.forEach((row, idx) => {
-        const nome = (row["Jogador"] || "").toString().trim();
-        // PORTATEIS
-        const portateis = parseInt(row["PORTATEIS"] || "0", 10);
-        if (portateis > 0) {
-          const player = players?.find(
-            (p) =>
-              p.is_active &&
-              (p.display_name?.toLowerCase() === nome.toLowerCase() ||
-                p.username?.toLowerCase() === nome.toLowerCase() ||
-                p.display_name?.toLowerCase().includes(nome.toLowerCase()) ||
-                p.username?.toLowerCase().includes(nome.toLowerCase()))
-          );
-          if (!player) fantasmas.push(nome);
-          donationsToInsert.push({
-            player_id: player ? player.id : null,
-            player_name: nome,
-            amount: portateis,
-            event: 'PORTATEIS',
-            donation_type: 'portateis',
-            portals: 1,
-            date: new Date().toISOString().split('T')[0],
-            created_by: null,
-            created_by_email: 'import-excel',
-            description: 'Importado via Excel'
-          });
-        }
-        // Dinheiro (M)
-        const dinheiroM = parseInt(row["Dinheiro (M)"] || "0", 10);
-        if (dinheiroM > 0) {
-          const player = players?.find(
-            (p) =>
-              p.is_active &&
-              (p.display_name?.toLowerCase() === nome.toLowerCase() ||
-                p.username?.toLowerCase() === nome.toLowerCase() ||
-                p.display_name?.toLowerCase().includes(nome.toLowerCase()) ||
-                p.username?.toLowerCase().includes(nome.toLowerCase()))
-          );
-          if (!player) fantasmas.push(nome);
-          donationsToInsert.push({
-            player_id: player ? player.id : null,
-            player_name: nome,
-            amount: dinheiroM * 1000000,
-            event: 'Moeda',
-            donation_type: 'moeda',
-            portals: 1,
-            date: new Date().toISOString().split('T')[0],
-            created_by: null,
-            created_by_email: 'import-excel',
-            description: 'Importado via Excel'
-          });
-        }
+      selectedSheets.forEach(sheetName => {
+        const sheet = workbook.Sheets[sheetName];
+        const rows: any[] = XLSX.utils.sheet_to_json(sheet);
+        rows.forEach((row, idx) => {
+          const nome = (row["Jogador"] || "").toString().trim();
+          // Portáteis
+          const portateis = parseInt(row["Portáteis"] || "0", 10);
+          if (portateis > 0) {
+            const player = players?.find(
+              (p) =>
+                p.is_active &&
+                (p.display_name?.toLowerCase() === nome.toLowerCase() ||
+                  p.username?.toLowerCase() === nome.toLowerCase() ||
+                  p.display_name?.toLowerCase().includes(nome.toLowerCase()) ||
+                  p.username?.toLowerCase().includes(nome.toLowerCase()))
+            );
+            if (!player) fantasmas.push(nome);
+            donationsToInsert.push({
+              player_id: player ? player.id : null,
+              player_name: nome,
+              amount: portateis,
+              event: 'PORTATEIS',
+              donation_type: 'portateis',
+              portals: 1,
+              date: new Date().toISOString().split('T')[0],
+              created_by: null,
+              created_by_email: 'import-excel',
+              description: 'Importado via Excel'
+            });
+          }
+          // Dinheiro (M)
+          const dinheiroM = parseInt(row["Total Doado (M)"] || "0", 10);
+          if (dinheiroM > 0) {
+            const player = players?.find(
+              (p) =>
+                p.is_active &&
+                (p.display_name?.toLowerCase() === nome.toLowerCase() ||
+                  p.username?.toLowerCase() === nome.toLowerCase() ||
+                  p.display_name?.toLowerCase().includes(nome.toLowerCase()) ||
+                  p.username?.toLowerCase().includes(nome.toLowerCase()))
+            );
+            if (!player) fantasmas.push(nome);
+            donationsToInsert.push({
+              player_id: player ? player.id : null,
+              player_name: nome,
+              amount: dinheiroM * 1000000,
+              event: 'Moeda',
+              donation_type: 'moeda',
+              portals: 1,
+              date: new Date().toISOString().split('T')[0],
+              created_by: null,
+              created_by_email: 'import-excel',
+              description: 'Importado via Excel'
+            });
+          }
+        });
       });
-      console.log('Doações a serem inseridas:', donationsToInsert);
       // Inserir em lotes de 100 para evitar timeout
       let totalInseridas = 0;
       for (let i = 0; i < donationsToInsert.length; i += 100) {
@@ -293,6 +311,8 @@ const Donations = () => {
           console.error('Erro ao inserir batch:', error, batch);
           toast({ title: 'Erro na importação', description: error.message || 'Erro desconhecido', variant: 'destructive' });
           setLoading(false);
+          setShowSheetModal(false);
+          setPendingExcelFile(null);
           if (fileInputRef.current) fileInputRef.current.value = '';
           return;
         }
@@ -311,6 +331,8 @@ const Donations = () => {
       toast({ title: 'Erro na importação', description: err.message || 'Erro desconhecido', variant: 'destructive' });
     }
     setLoading(false);
+    setShowSheetModal(false);
+    setPendingExcelFile(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -462,7 +484,7 @@ const Donations = () => {
                   accept=".xlsx, .xls"
                   ref={fileInputRef}
                   style={{ display: 'none' }}
-                  onChange={handleImportExcel}
+                  onChange={handleExcelFileSelect}
                 />
               </>
             )}
@@ -508,6 +530,38 @@ const Donations = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {/* Modal de seleção de abas para importação */}
+      {showSheetModal && (
+        <AlertDialog open={showSheetModal} onOpenChange={setShowSheetModal}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Selecionar abas para importar</AlertDialogTitle>
+            </AlertDialogHeader>
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {sheetNames.map((sheet) => (
+                <label key={sheet} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedSheets.includes(sheet)}
+                    onChange={e => {
+                      if (e.target.checked) {
+                        setSelectedSheets(prev => [...prev, sheet]);
+                      } else {
+                        setSelectedSheets(prev => prev.filter(s => s !== sheet));
+                      }
+                    }}
+                  />
+                  {sheet}
+                </label>
+              ))}
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setShowSheetModal(false)}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleImportSelectedSheets} disabled={selectedSheets.length === 0}>Importar</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </Layout>
   );
 };
