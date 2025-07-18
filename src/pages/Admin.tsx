@@ -52,7 +52,17 @@ const AdminPage = () => {
   const fetchUsers = async () => {
     setFetching(true);
     try {
-      // Buscar apenas user_roles - dados básicos
+      // Usar a API para buscar dados completos dos usuários
+      const response = await fetch('/api/admin-users');
+      if (!response.ok) {
+        throw new Error('Erro ao buscar usuários');
+      }
+      
+      const { users } = await response.json();
+      setUsers(users);
+    } catch (error) {
+      console.error('Erro ao buscar usuários:', error);
+      // Fallback: buscar apenas user_roles
       let { data: userRoles, error: userRolesError } = await supabase
         .from('user_roles')
         .select('user_id, role, clan_name')
@@ -69,21 +79,29 @@ const AdminPage = () => {
       const usersWithDetails = userRoles.map((userRole) => {
         // Se for o usuário atual, usar os dados disponíveis
         const isCurrentUser = user && user.id === userRole.user_id;
-        const displayName = isCurrentUser 
-          ? (user.user_metadata?.full_name || user.user_metadata?.name || user.email || 'Usuário Atual')
-          : `Usuário ${userRole.user_id.slice(0, 8)}...`;
-
+        
+        // Para o usuário atual, usar dados do contexto
+        if (isCurrentUser) {
+          const displayName = user.user_metadata?.full_name || 
+                             user.user_metadata?.name || 
+                             user.email || 
+                             'Usuário Atual';
+          return {
+            ...userRole,
+            displayName,
+            email: user.email
+          };
+        }
+        
+        // Para outros usuários, usar ID truncado como fallback
         return {
           ...userRole,
-          displayName,
-          email: isCurrentUser ? user.email : null
+          displayName: `Usuário ${userRole.user_id.slice(0, 8)}...`,
+          email: null
         };
       });
 
       setUsers(usersWithDetails);
-    } catch (error) {
-      console.error('Erro ao buscar usuários:', error);
-      setUsers([]);
     }
     setFetching(false);
   };
