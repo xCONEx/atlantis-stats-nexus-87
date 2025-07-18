@@ -71,17 +71,17 @@ const Landing = () => {
       <header className="border-b border-border bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <img src="/icon/2logo.png" alt="Logo Atlantis" className="h-8 w-8" />
+            <Link to="/" className="flex items-center space-x-3 group">
+              <img src="/icon/2logo.svg" alt="Logo Atlantis" className="h-8 w-8 group-hover:scale-105 transition-transform" />
               <div>
-                <h1 className="text-2xl font-cinzel font-bold text-runescape-gold">
+                <h1 className="text-2xl font-cinzel font-bold text-runescape-gold group-hover:text-yellow-400 transition-colors">
                   Atlantis Stats
                 </h1>
                 <p className="text-sm text-muted-foreground">
                   RuneScape 3 Dashboard
                 </p>
               </div>
-            </div>
+            </Link>
             
             <div className="flex items-center space-x-4">
               <Link to="/login">
