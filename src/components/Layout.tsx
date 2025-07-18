@@ -17,7 +17,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
   const handlePlayerNameClick = async () => {
     if (!rsUsername) return;
-    // Buscar dados do jogador na tabela players
     const { data, error } = await supabase
       .from('players')
       .select('*')
@@ -30,10 +29,10 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         combat: data.combat_level || 0,
         totalLevel: data.total_level || 0,
         totalXp: data.total_experience || 0,
-        lastSeen: data.updated_at || '',
-        isOnline: data.is_active || false,
+        lastSeen: data.updated_at ? new Date(data.updated_at).toLocaleString('pt-BR') : '',
+        isOnline: !!data.is_active,
         rank: data.clan_rank || '',
-        joined: data.created_at || ''
+        joined: data.created_at ? new Date(data.created_at).toLocaleDateString('pt-BR') : ''
       });
       setPlayerModalOpen(true);
     }
