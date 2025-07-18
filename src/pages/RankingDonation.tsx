@@ -56,15 +56,15 @@ const RankingDonation = () => {
 
   const formatAmount = (amount: number) => {
     if (amount >= 1_000_000_000_000_000) {
-      return `${(amount / 1_000_000_000_000_000).toFixed(1)}Q`;
+      return `${(amount / 1_000_000_000_000_000).toFixed(3).replace(/\.000$/, '')}Q`;
     } else if (amount >= 1_000_000_000_000) {
-      return `${(amount / 1_000_000_000_000).toFixed(1)}T`;
+      return `${(amount / 1_000_000_000_000).toFixed(3).replace(/\.000$/, '')}T`;
     } else if (amount >= 1_000_000_000) {
-      return `${(amount / 1_000_000_000).toFixed(1)}B`;
+      return `${(amount / 1_000_000_000).toFixed(3).replace(/\.000$/, '')}B`;
     } else if (amount >= 1_000_000) {
-      return `${(amount / 1_000_000).toFixed(1)}M`;
+      return `${(amount / 1_000_000).toFixed(3).replace(/\.000$/, '')}M`;
     } else if (amount >= 1_000) {
-      return `${(amount / 1_000).toFixed(1)}K`;
+      return `${(amount / 1_000).toFixed(3).replace(/\.000$/, '')}K`;
     }
     return amount.toLocaleString('pt-BR');
   };
