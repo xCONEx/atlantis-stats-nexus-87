@@ -5,11 +5,39 @@ import { Link, useLocation } from "react-router-dom";
 import { useState } from 'react';
 import LinkDiscordModal from '@/components/LinkDiscordModal';
 import { hasRolePermission } from "@/lib/utils";
+import PlayerDetailsModal from './PlayerDetailsModal';
+import { supabase } from '@/integrations/supabase/client';
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const { signOut, userRole, rsUsername, user } = useAuth();
   const location = useLocation();
   const [showLinkModal, setShowLinkModal] = useState(false);
+  const [playerModalOpen, setPlayerModalOpen] = useState(false);
+  const [playerData, setPlayerData] = useState<any>(null);
+
+  const handlePlayerNameClick = async () => {
+    if (!rsUsername) return;
+    // Buscar dados do jogador na tabela players
+    const { data, error } = await supabase
+      .from('players')
+      .select('*')
+      .eq('username', rsUsername)
+      .single();
+    if (!error && data) {
+      setPlayerData({
+        name: data.username,
+        clan: data.clan_name || '',
+        combat: data.combat_level || 0,
+        totalLevel: data.total_level || 0,
+        totalXp: data.total_experience || 0,
+        lastSeen: data.updated_at || '',
+        isOnline: data.is_active || false,
+        rank: data.clan_rank || '',
+        joined: data.created_at || ''
+      });
+      setPlayerModalOpen(true);
+    }
+  };
   return (
     <div className="min-h-screen bg-gradient-background">
       {/* Header */}
@@ -35,7 +63,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                 <Settings className="h-4 w-4" />
                 Configurações
               </Button>
-              <Button variant="outline" size="sm" onClick={() => setShowLinkModal(true)}>
+              <Button variant="outline" size="sm"
+                onClick={rsUsername ? handlePlayerNameClick : () => setShowLinkModal(true)}>
                 {rsUsername ? rsUsername : 'Vincular Perfil RuneScape'}
               </Button>
               <Button variant="runescape" size="sm">
@@ -63,6 +92,13 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               window.location.reload();
             }
           }}
+        />
+      )}
+      {playerModalOpen && playerData && (
+        <PlayerDetailsModal
+          player={playerData}
+          open={playerModalOpen}
+          onClose={() => setPlayerModalOpen(false)}
         />
       )}
 
