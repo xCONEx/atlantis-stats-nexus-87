@@ -81,6 +81,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         username: player.name,
         player_id: null // pode buscar o id real se necessário
       }, { onConflict: 'discord_id,username' });
+      // Buscar player_id pelo username e atualizar o registro
+      const { data: playerRow } = await supabase
+        .from('players')
+        .select('id')
+        .eq('username', player.name)
+        .single();
+      if (playerRow && playerRow.id) {
+        await supabase.from('discord_links')
+          .update({ player_id: playerRow.id })
+          .eq('discord_id', realDiscordId)
+          .eq('username', player.name);
+      }
       // Chamar endpoint para atualizar cargo no Discord
       try {
         await axios.post('https://atlantisstatus.vercel.app/api/discord-roles', {
