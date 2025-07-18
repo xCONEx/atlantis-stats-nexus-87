@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Calendar, Shield, User, DollarSign, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -83,35 +83,32 @@ const DonationModal = ({ open, onClose, onSave, donation, editMode = false }: Do
     "Skill Competition"
   ];
 
+  // Busca case-insensitive e parcial
+  const matchedPlayer = useMemo(() => {
+    if (!formData.playerName) return null;
+    const name = cleanPlayerName(formData.playerName).toLowerCase();
+    return players.find(
+      (p) =>
+        cleanPlayerName(p.display_name || p.username).toLowerCase() === name ||
+        cleanPlayerName(p.username).toLowerCase() === name
+    ) || players.find(
+      (p) =>
+        cleanPlayerName(p.display_name || p.username).toLowerCase().includes(name) ||
+        cleanPlayerName(p.username).toLowerCase().includes(name)
+    );
+  }, [formData.playerName, players]);
+
   useEffect(() => {
-    if (donation && editMode) {
-      setFormData({
-        playerName: '', // não usado mais
-        amount: donation.amount.toString(),
-        event: donation.event,
-        portals: donation.portals.toString(),
-        date: donation.date,
-        createdBy: '',
-        createdByEmail: donation.created_by_email || "",
-        notes: donation.notes || ""
-      });
-      // Find the player by ID for editing
-      const player = players.find(p => p.id === donation.player_id);
-      setSelectedPlayer(player || null);
-    } else {
-      setFormData({
-        playerName: "",
-        amount: "",
-        event: "",
-        portals: "1",
-        date: new Date().toISOString().split('T')[0],
-        createdBy: "",
-        createdByEmail: user?.email || "",
-        notes: ""
-      });
+    if (matchedPlayer) {
+      setSelectedPlayer(matchedPlayer);
+      setFormData((prev) => ({ ...prev, playerName: matchedPlayer.username }));
+    }
+    // Se não houver match, não seleciona ninguém
+    if (!matchedPlayer && selectedPlayer) {
       setSelectedPlayer(null);
     }
-  }, [donation, editMode, open, user]);
+    // eslint-disable-next-line
+  }, [matchedPlayer]);
 
   useEffect(() => {
     const fetchPlayers = async () => {
@@ -218,7 +215,7 @@ const DonationModal = ({ open, onClose, onSave, donation, editMode = false }: Do
                 value={cleanPlayerName(formData.playerName)}
                 onChange={e => {
                   setFormData({ ...formData, playerName: e.target.value });
-                  setSelectedPlayer(null);
+                  // Não zera selectedPlayer aqui, pois o useEffect já faz isso
                 }}
               />
             </div>
