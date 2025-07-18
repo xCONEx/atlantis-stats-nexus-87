@@ -56,11 +56,6 @@ async function removeDonationRoles(discord_id) {
 
 export default async function handler(req, res) {
   // Autenticação simples via token
-  const authHeader = req.headers['authorization'];
-  if (!authHeader || authHeader !== `Bearer ${BOT_TOKEN}`) {
-    return res.status(401).json({ error: 'Não autorizado' });
-  }
-
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Método não permitido' });
   }
