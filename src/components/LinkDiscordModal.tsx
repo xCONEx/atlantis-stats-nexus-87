@@ -10,9 +10,10 @@ interface LinkDiscordModalProps {
   open: boolean;
   onClose: () => void;
   discordId: string;
+  onLinked?: () => void; // Novo callback opcional
 }
 
-export default function LinkDiscordModal({ open, onClose, discordId }: LinkDiscordModalProps) {
+export default function LinkDiscordModal({ open, onClose, discordId, onLinked }: LinkDiscordModalProps) {
   const [nick, setNick] = useState('');
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -65,6 +66,7 @@ export default function LinkDiscordModal({ open, onClose, discordId }: LinkDisco
     }, { onConflict: 'discord_id,username' });
     setLoading(false);
     toast({ title: 'Sucesso', description: 'Discord vinculado ao seu nick!', variant: 'default' });
+    if (onLinked) onLinked(); // Chama callback se fornecido
     onClose();
   };
 
