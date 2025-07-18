@@ -51,13 +51,48 @@ const AdminPage = () => {
   // Buscar usuários autenticados e seus cargos
   const fetchUsers = async () => {
     setFetching(true);
-    let { data, error } = await supabase
-      .from('user_roles')
-      .select('user_id, role, clan_name, users:users(email), discord_links(username, discord_id)')
-      .order('role', { ascending: false });
-    if (!error && data) {
-      setUsers(data);
-    } else {
+    try {
+      // Primeiro buscar user_roles
+      let { data: userRoles, error: userRolesError } = await supabase
+        .from('user_roles')
+        .select('user_id, role, clan_name')
+        .order('role', { ascending: false });
+      
+      if (userRolesError) {
+        console.error('Erro ao buscar user_roles:', userRolesError);
+        setUsers([]);
+        setFetching(false);
+        return;
+      }
+
+      // Para cada user_role, buscar dados do usuário e discord
+      const usersWithDetails = await Promise.all(
+        userRoles.map(async (userRole) => {
+          // Buscar dados do usuário
+          const { data: userData } = await supabase
+            .from('users')
+            .select('email')
+            .eq('id', userRole.user_id)
+            .single();
+
+          // Buscar dados do Discord
+          const { data: discordData } = await supabase
+            .from('discord_links')
+            .select('username, discord_id')
+            .eq('discord_id', userRole.user_id)
+            .single();
+
+          return {
+            ...userRole,
+            users: userData,
+            discord_links: discordData
+          };
+        })
+      );
+
+      setUsers(usersWithDetails);
+    } catch (error) {
+      console.error('Erro ao buscar usuários:', error);
       setUsers([]);
     }
     setFetching(false);
@@ -203,55 +238,62 @@ const AdminPage = () => {
         <span className="text-muted-foreground text-sm">Total: {filteredUsers.length}</span>
       </div>
       <div className="overflow-x-auto rounded-lg shadow border border-runescape-gold/10 bg-card">
-        <table className="min-w-full divide-y divide-runescape-gold/10">
-          <thead className="bg-runescape-gold/10">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-runescape-gold">Nome</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-runescape-gold">E-mail</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-runescape-gold">Cargo</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-runescape-gold">Ações</th>
-            </tr>
-          </thead>
-          <tbody className="bg-card divide-y divide-runescape-gold/10">
-            {filteredUsers.map((u) => (
-              <tr key={u.user_id} className="hover:bg-runescape-gold/5 transition">
-                <td className="px-4 py-3 font-medium text-runescape-gold">{u.discord_links?.username || '-'}</td>
-                <td className="px-4 py-3 text-muted-foreground">{u.users?.email || '-'}</td>
-                <td className="px-4 py-3">
-                  {editingRole === u.user_id ? (
-                    <Select value={roleDraft} onValueChange={setRoleDraft}>
-                      <SelectTrigger className="w-32">
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.keys(roleLabels).map(role => (
-                          <SelectItem key={role} value={role}>{roleLabels[role]}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <span className="capitalize font-semibold text-runescape-gold">{roleLabels[u.role] || u.role}</span>
-                  )}
-                </td>
-                <td className="px-4 py-3">
-                  {editingRole === u.user_id ? (
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="runescape" onClick={() => handleSaveRole(u.user_id, u.role, roleDraft)} disabled={loading || u.role === roleDraft}>Salvar</Button>
-                      <Button size="sm" variant="outline" onClick={() => setEditingRole(null)} disabled={loading}>Cancelar</Button>
-                    </div>
-                  ) : (
-                    <Button size="sm" variant="outline" onClick={() => handleEditRole(u.user_id, u.role)}>Editar</Button>
-                  )}
-                </td>
-              </tr>
-            ))}
-            {filteredUsers.length === 0 && (
+        {fetching ? (
+          <div className="p-8 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-runescape-gold mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Carregando usuários...</p>
+          </div>
+        ) : (
+          <table className="min-w-full divide-y divide-runescape-gold/10">
+            <thead className="bg-runescape-gold/10">
               <tr>
-                <td colSpan={4} className="text-center py-8 text-muted-foreground">Nenhum usuário encontrado.</td>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-runescape-gold">Nome</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-runescape-gold">E-mail</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-runescape-gold">Cargo</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-runescape-gold">Ações</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="bg-card divide-y divide-runescape-gold/10">
+              {filteredUsers.map((u) => (
+                <tr key={u.user_id} className="hover:bg-runescape-gold/5 transition">
+                  <td className="px-4 py-3 font-medium text-runescape-gold">{u.discord_links?.username || '-'}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{u.users?.email || '-'}</td>
+                  <td className="px-4 py-3">
+                    {editingRole === u.user_id ? (
+                      <Select value={roleDraft} onValueChange={setRoleDraft}>
+                        <SelectTrigger className="w-32">
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.keys(roleLabels).map(role => (
+                            <SelectItem key={role} value={role}>{roleLabels[role]}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <span className="capitalize font-semibold text-runescape-gold">{roleLabels[u.role] || u.role}</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {editingRole === u.user_id ? (
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="runescape" onClick={() => handleSaveRole(u.user_id, u.role, roleDraft)} disabled={loading || u.role === roleDraft}>Salvar</Button>
+                        <Button size="sm" variant="outline" onClick={() => setEditingRole(null)} disabled={loading}>Cancelar</Button>
+                      </div>
+                    ) : (
+                      <Button size="sm" variant="outline" onClick={() => handleEditRole(u.user_id, u.role)}>Editar</Button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {filteredUsers.length === 0 && !fetching && (
+                <tr>
+                  <td colSpan={4} className="text-center py-8 text-muted-foreground">Nenhum usuário encontrado.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
       </div>
       <div className="mt-8 text-xs text-muted-foreground text-center">
         Todas as alterações de cargo são registradas em log de auditoria.<br/>
