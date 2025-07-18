@@ -266,7 +266,7 @@ const Donations = () => {
                         <Card
                           key={player.player_id}
                           className="shadow-md hover:shadow-lg transition cursor-pointer"
-                          onClick={() => setSelectedPlayer({ player_id: player.player_id, player_name: player.player_name })}
+                          // Remover onClick do Card
                         >
                           <CardHeader>
                             <CardTitle className="truncate">{cleanPlayerName(player.player_name)}</CardTitle>
@@ -276,7 +276,14 @@ const Donations = () => {
                             <div className="flex items-center gap-2">
                               <span className={`font-bold text-lg ${gp.color}`}>{gp.display} GP</span>
                             </div>
-                            <Button variant={"outline" as any} size={"sm" as any} className="mt-2 w-full">Ver detalhes</Button>
+                            <Button
+                              variant={"outline" as any}
+                              size={"sm" as any}
+                              className="mt-2 w-full"
+                              onClick={() => setSelectedPlayer({ player_id: player.player_id, player_name: player.player_name })}
+                            >
+                              Ver detalhes
+                            </Button>
                           </CardContent>
                         </Card>
                       );
