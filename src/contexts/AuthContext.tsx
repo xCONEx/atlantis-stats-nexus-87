@@ -75,6 +75,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('ID real do Discord não encontrado no objeto de autenticação!');
         return;
       }
+      // Garantir que o ID é numérico
+      if (!/^[0-9]{15,20}$/.test(realDiscordId)) {
+        console.error('ID do Discord não é numérico! Valor:', realDiscordId);
+        toast({ title: 'Erro', description: 'ID do Discord inválido. Faça login novamente com Discord.', variant: 'destructive' });
+        return;
+      }
       const player = matches[0];
       await supabase.from('discord_links').upsert({
         discord_id: realDiscordId,
