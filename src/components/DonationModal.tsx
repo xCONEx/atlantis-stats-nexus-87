@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import axios from 'axios';
@@ -108,6 +108,22 @@ const DonationModal = ({ open, onClose, onSave, donation, editMode = false }: Do
     };
     fetchPlayers();
   }, []);
+
+  useEffect(() => {
+    if (open && !editMode) {
+      setFormData({
+        playerName: "",
+        amount: "",
+        event: "",
+        portals: "1",
+        date: new Date().toISOString().split('T')[0],
+        createdBy: "",
+        createdByEmail: "",
+        notes: ""
+      });
+      setSelectedPlayer(null);
+    }
+  }, [open, editMode]);
 
   const calcularCargo = (total) => {
     if (total >= 5000000000) return 'Personalizado 👑';
@@ -253,6 +269,9 @@ const DonationModal = ({ open, onClose, onSave, donation, editMode = false }: Do
           <DialogTitle className="text-runescape-gold">
             {editMode ? "Editar Doação" : "Nova Doação"}
           </DialogTitle>
+          <DialogDescription>
+            {editMode ? "Altere os dados da doação abaixo." : "Preencha os dados da nova doação."}
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
