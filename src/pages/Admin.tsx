@@ -98,10 +98,13 @@ const AdminPage = () => {
 
       // Criar um mapa de perfis por user_id
       const profilesMap = new Map();
-      if (userProfiles) {
+      if (userProfiles && userProfiles.length > 0) {
         userProfiles.forEach(profile => {
           profilesMap.set(profile.user_id, profile);
         });
+        console.log('Profiles map criado com', profilesMap.size, 'perfis');
+      } else {
+        console.log('Nenhum perfil encontrado ou userProfiles é null/empty');
       }
 
       // Combinar dados
@@ -130,6 +133,7 @@ const AdminPage = () => {
 
   useEffect(() => {
     if (user && ADMIN_ROLES.includes(userRole || '')) {
+      console.log('Iniciando fetchUsers...', new Date().toISOString());
       fetchUsers();
     }
   }, [user, userRole]);
