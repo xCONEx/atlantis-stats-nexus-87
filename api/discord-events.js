@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
 const GUILD_ID = "321012107942428673";
-const PVM_CHANNEL_ID = process.env.DISCORD_PVM_CHANNEL_ID || "1131608362577051709"; // Substitua pelo ID do canal PvM
+const PVM_CHANNEL_ID = process.env.DISCORD_PVM_CHANNEL_ID || "467069985270005760"; // Substitua pelo ID do canal PvM
 
 // Emojis para reações
 const REACTION_EMOJIS = {
