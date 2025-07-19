@@ -1,4 +1,4 @@
-import { Zap, Shield, Users, TrendingUp, Settings, LogOut } from "lucide-react";
+import { Zap, Shield, Users, TrendingUp, Settings, LogOut, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link, useLocation } from "react-router-dom";
@@ -144,8 +144,21 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                 Doações
               </Button>
             </Link>
+            <Link to="/events">
+              <Button 
+                variant="ghost" 
+                className={`rounded-none border-b-2 ${
+                  location.pathname === '/events' 
+                    ? 'border-runescape-gold' 
+                    : 'border-transparent hover:border-runescape-gold'
+                }`}
+              >
+                <Calendar className="h-4 w-4" />
+                Eventos
+              </Button>
+            </Link>
             {hasRolePermission(userRole, [
-              'admin', 'administrator', 'leader', 'vice-leader', 'coordinator'
+              'leader', 'vice-leader', 'coordinator', 'fiscal', 'organizer', 'administrator', 'admin'
             ]) && (
               <Link to="/clans">
                 <Button 
@@ -161,7 +174,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                 </Button>
               </Link>
             )}
-            {hasRolePermission(userRole, ['admin', 'leader']) && (
+            {hasRolePermission(userRole, ['leader', 'vice-leader', 'administrator', 'admin']) && (
               <Link to="/admin">
                 <Button 
                   variant="ghost" 
