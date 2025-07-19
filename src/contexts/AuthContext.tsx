@@ -224,12 +224,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Função para buscar e vincular usuário do AtlantisBot via discord_id
   const linkAtlantisBotUser = async (discordId: string) => {
     try {
-      const response = await axios.get(`https://atlantis.jvfs.dev/atlantisbot/api/users.json?search=${discordId}`);
+      const response = await axios.get(`/api/atlantisbot-proxy?discord_id=${discordId}`);
       const users = response.data;
       if (Array.isArray(users) && users.length === 1) {
         // Usuário encontrado, vincular automaticamente
         const atlantisUser = users[0];
-        // Upsert no Supabase (discord_links)
         await supabase.from('discord_links').upsert({
           discord_id: discordId,
           username: atlantisUser.ingame_name || atlantisUser.ingame_names?.[0]?.name || null,
@@ -241,7 +240,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           variant: 'default',
         });
       } else {
-        // Não encontrado ou múltiplos resultados
         toast({
           title: 'Discord não vinculado ao clan',
           description: 'Sua conta do Discord não está vinculada ao clan Atlantis. Fale com um administrador se necessário.',
