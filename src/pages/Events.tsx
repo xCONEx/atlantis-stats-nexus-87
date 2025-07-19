@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Calendar, Plus, Users, Clock, MapPin, Target, Award, Filter, Search } from "lucide-react";
+import { Calendar, Plus, Users, Clock, MapPin, Target, Award, Filter, Search, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import Layout from "@/components/Layout";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -65,9 +66,10 @@ const Events = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [filterType, setFilterType] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const { toast } = useToast();
   const { userRole } = useAuth();
 
@@ -84,10 +86,24 @@ const Events = () => {
   });
 
   const canCreateEvents = userRole && ['leader', 'vice-leader', 'coordinator', 'fiscal', 'organizer', 'administrator', 'admin'].includes(userRole);
+  const canEditEvents = userRole && ['leader', 'vice-leader', 'coordinator', 'fiscal', 'organizer', 'administrator', 'admin'].includes(userRole);
 
   useEffect(() => {
     fetchEvents();
   }, []);
+
+  // Função para obter data mínima (hoje + 1 hora)
+  const getMinDateTime = () => {
+    const now = new Date();
+    now.setHours(now.getHours() + 1); // Mínimo 1 hora no futuro
+    return now.toISOString().slice(0, 16); // Formato para datetime-local
+  };
+
+  // Função para formatar data para datetime-local
+  const formatDateForInput = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toISOString().slice(0, 16);
+  };
 
   const fetchEvents = async () => {
     setLoading(true);
@@ -120,11 +136,37 @@ const Events = () => {
     }
   };
 
+  const resetFormData = () => {
+    setFormData({
+      title: "",
+      description: "",
+      event_type: "pvm",
+      boss_name: "",
+      start_time: "",
+      end_time: "",
+      max_participants: 0,
+      is_recurring: false,
+      recurring_type: "weekly"
+    });
+  };
+
   const handleCreateEvent = async () => {
     if (!formData.title || !formData.start_time) {
       toast({
         title: "Erro",
         description: "Título e data de início são obrigatórios",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validar se a data de início é no futuro
+    const startDate = new Date(formData.start_time);
+    const now = new Date();
+    if (startDate <= now) {
+      toast({
+        title: "Erro",
+        description: "A data de início deve ser no futuro",
         variant: "destructive"
       });
       return;
@@ -160,17 +202,7 @@ const Events = () => {
       });
 
       setShowCreateModal(false);
-      setFormData({
-        title: "",
-        description: "",
-        event_type: "pvm",
-        boss_name: "",
-        start_time: "",
-        end_time: "",
-        max_participants: 0,
-        is_recurring: false,
-        recurring_type: "weekly"
-      });
+      resetFormData();
       fetchEvents();
     } catch (error) {
       console.error('Erro ao criar evento:', error);
@@ -180,6 +212,113 @@ const Events = () => {
         variant: "destructive"
       });
     }
+  };
+
+  const handleEditEvent = async () => {
+    if (!editingEvent || !formData.title || !formData.start_time) {
+      toast({
+        title: "Erro",
+        description: "Título e data de início são obrigatórios",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validar se a data de início é no futuro (apenas para eventos planejados)
+    if (editingEvent.status === 'planned') {
+      const startDate = new Date(formData.start_time);
+      const now = new Date();
+      if (startDate <= now) {
+        toast({
+          title: "Erro",
+          description: "A data de início deve ser no futuro para eventos planejados",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
+    try {
+      const eventData = {
+        title: formData.title,
+        description: formData.description,
+        event_type: formData.event_type,
+        boss_name: formData.boss_name || null,
+        start_time: formData.start_time,
+        end_time: formData.end_time || null,
+        max_participants: formData.max_participants || null,
+      };
+
+      const { error } = await supabase
+        .from('events')
+        .update(eventData)
+        .eq('id', editingEvent.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Evento atualizado com sucesso!"
+      });
+
+      setShowEditModal(false);
+      setEditingEvent(null);
+      resetFormData();
+      fetchEvents();
+    } catch (error) {
+      console.error('Erro ao atualizar evento:', error);
+      toast({
+        title: "Erro",
+        description: "Falha ao atualizar evento",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeleteEvent = async () => {
+    if (!editingEvent) return;
+
+    try {
+      const { error } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', editingEvent.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Evento removido com sucesso!"
+      });
+
+      setShowEditModal(false);
+      setEditingEvent(null);
+      resetFormData();
+      fetchEvents();
+    } catch (error) {
+      console.error('Erro ao remover evento:', error);
+      toast({
+        title: "Erro",
+        description: "Falha ao remover evento",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const openEditModal = (event: Event) => {
+    setEditingEvent(event);
+    setFormData({
+      title: event.title,
+      description: event.description,
+      event_type: event.event_type,
+      boss_name: event.boss_name || "",
+      start_time: formatDateForInput(event.start_time),
+      end_time: event.end_time ? formatDateForInput(event.end_time) : "",
+      max_participants: event.max_participants || 0,
+      is_recurring: false, // Não implementado ainda
+      recurring_type: "weekly"
+    });
+    setShowEditModal(true);
   };
 
   const sendDiscordNotification = async (event: Event) => {
@@ -235,18 +374,19 @@ const Events = () => {
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-8">
+      <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Eventos do Clã</h1>
-            <p className="text-muted-foreground">Gerencie eventos, raids e atividades do clã</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Eventos do Clã</h1>
+            <p className="text-muted-foreground text-sm sm:text-base">Gerencie eventos, raids e atividades do clã</p>
           </div>
           {canCreateEvents && (
             <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
               <DialogTrigger asChild>
-                <Button className="flex items-center gap-2">
+                <Button className="flex items-center gap-2 w-full sm:w-auto">
                   <Plus className="h-4 w-4" />
-                  Criar Evento
+                  <span className="hidden sm:inline">Criar Evento</span>
+                  <span className="sm:hidden">Criar</span>
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-2xl">
@@ -315,6 +455,7 @@ const Events = () => {
                         id="start_time"
                         type="datetime-local"
                         value={formData.start_time}
+                        min={getMinDateTime()}
                         onChange={(e) => setFormData({...formData, start_time: e.target.value})}
                       />
                     </div>
@@ -324,6 +465,7 @@ const Events = () => {
                         id="end_time"
                         type="datetime-local"
                         value={formData.end_time}
+                        min={formData.start_time || getMinDateTime()}
                         onChange={(e) => setFormData({...formData, end_time: e.target.value})}
                       />
                     </div>
@@ -381,7 +523,10 @@ const Events = () => {
                   </div>
 
                   <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={() => setShowCreateModal(false)}>
+                    <Button variant="outline" onClick={() => {
+                      setShowCreateModal(false);
+                      resetFormData();
+                    }}>
                       Cancelar
                     </Button>
                     <Button onClick={handleCreateEvent}>
@@ -394,17 +539,17 @@ const Events = () => {
           )}
         </div>
 
-        <div className="flex gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <div className="flex-1">
             <Input
               placeholder="Buscar eventos..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-sm"
+              className="w-full sm:max-w-sm"
             />
           </div>
           <Select value={filterType} onValueChange={setFilterType}>
-            <SelectTrigger className="w-48">
+            <SelectTrigger className="w-full sm:w-48">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -419,10 +564,16 @@ const Events = () => {
         </div>
 
         <Tabs defaultValue="upcoming" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="upcoming">Próximos Eventos ({upcomingEvents.length})</TabsTrigger>
-            <TabsTrigger value="active">Eventos Ativos ({activeEvents.length})</TabsTrigger>
-            <TabsTrigger value="past">Eventos Passados ({pastEvents.length})</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="upcoming" className="text-xs sm:text-sm">
+              Próximos ({upcomingEvents.length})
+            </TabsTrigger>
+            <TabsTrigger value="active" className="text-xs sm:text-sm">
+              Ativos ({activeEvents.length})
+            </TabsTrigger>
+            <TabsTrigger value="past" className="text-xs sm:text-sm">
+              Passados ({pastEvents.length})
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="upcoming" className="space-y-4">
@@ -433,9 +584,15 @@ const Events = () => {
                 Nenhum evento próximo encontrado
               </div>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                 {upcomingEvents.map((event) => (
-                  <EventCard key={event.id} event={event} onUpdate={fetchEvents} />
+                  <EventCard 
+                    key={event.id} 
+                    event={event} 
+                    onUpdate={fetchEvents}
+                    onEdit={openEditModal}
+                    canEdit={canEditEvents}
+                  />
                 ))}
               </div>
             )}
@@ -449,9 +606,15 @@ const Events = () => {
                 Nenhum evento ativo no momento
               </div>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                 {activeEvents.map((event) => (
-                  <EventCard key={event.id} event={event} onUpdate={fetchEvents} />
+                  <EventCard 
+                    key={event.id} 
+                    event={event} 
+                    onUpdate={fetchEvents}
+                    onEdit={openEditModal}
+                    canEdit={canEditEvents}
+                  />
                 ))}
               </div>
             )}
@@ -465,14 +628,173 @@ const Events = () => {
                 Nenhum evento passado encontrado
               </div>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                 {pastEvents.map((event) => (
-                  <EventCard key={event.id} event={event} onUpdate={fetchEvents} />
+                  <EventCard 
+                    key={event.id} 
+                    event={event} 
+                    onUpdate={fetchEvents}
+                    onEdit={openEditModal}
+                    canEdit={canEditEvents}
+                  />
                 ))}
               </div>
             )}
           </TabsContent>
         </Tabs>
+
+        {/* Modal de Edição */}
+        <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Editar Evento</DialogTitle>
+              <DialogDescription>
+                Edite os detalhes do evento. As mudanças serão aplicadas imediatamente.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit_title">Título do Evento</Label>
+                  <Input
+                    id="edit_title"
+                    value={formData.title}
+                    onChange={(e) => setFormData({...formData, title: e.target.value})}
+                    placeholder="Ex: Raid Nex"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit_event_type">Tipo de Evento</Label>
+                  <Select
+                    value={formData.event_type}
+                    onValueChange={(value) => setFormData({...formData, event_type: value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {EVENT_TYPES.map(type => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {formData.event_type === 'pvm' && (
+                <div>
+                  <Label htmlFor="edit_boss_name">Boss/Minigame</Label>
+                  <Select
+                    value={formData.boss_name}
+                    onValueChange={(value) => setFormData({...formData, boss_name: value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o boss" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {BOSS_LIST.map(boss => (
+                        <SelectItem key={boss} value={boss}>
+                          {boss}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit_start_time">Data e Hora de Início</Label>
+                  <Input
+                    id="edit_start_time"
+                    type="datetime-local"
+                    value={formData.start_time}
+                    min={editingEvent?.status === 'planned' ? getMinDateTime() : undefined}
+                    onChange={(e) => setFormData({...formData, start_time: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit_end_time">Data e Hora de Fim (Opcional)</Label>
+                  <Input
+                    id="edit_end_time"
+                    type="datetime-local"
+                    value={formData.end_time}
+                    min={formData.start_time || getMinDateTime()}
+                    onChange={(e) => setFormData({...formData, end_time: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit_max_participants">Máximo de Participantes (Opcional)</Label>
+                  <Input
+                    id="edit_max_participants"
+                    type="number"
+                    value={formData.max_participants}
+                    onChange={(e) => setFormData({...formData, max_participants: parseInt(e.target.value) || 0})}
+                    placeholder="0 = ilimitado"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="edit_description">Descrição</Label>
+                <Textarea
+                  id="edit_description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  placeholder="Descreva o evento, requisitos, recompensas..."
+                  rows={4}
+                />
+              </div>
+
+              <div className="flex justify-between items-center">
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm">
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Remover Evento
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Confirmar Remoção</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Tem certeza que deseja remover o evento "{editingEvent?.title}"? 
+                        Esta ação não pode ser desfeita e todos os dados do evento serão perdidos permanentemente.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction 
+                        onClick={handleDeleteEvent}
+                        className="bg-red-600 hover:bg-red-700"
+                      >
+                        Sim, Remover Evento
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+                
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => {
+                    setShowEditModal(false);
+                    setEditingEvent(null);
+                    resetFormData();
+                  }}>
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleEditEvent}>
+                    Salvar Alterações
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );
@@ -481,9 +803,11 @@ const Events = () => {
 interface EventCardProps {
   event: Event;
   onUpdate: () => void;
+  onEdit: (event: Event) => void;
+  canEdit: boolean;
 }
 
-const EventCard = ({ event, onUpdate }: EventCardProps) => {
+const EventCard = ({ event, onUpdate, onEdit, canEdit }: EventCardProps) => {
   const { userRole } = useAuth();
   const { toast } = useToast();
   
@@ -537,11 +861,23 @@ const EventCard = ({ event, onUpdate }: EventCardProps) => {
             <EventTypeIcon className="h-5 w-5 text-primary" />
             <CardTitle className="text-lg">{event.title}</CardTitle>
           </div>
-          <Badge className={getEventStatusColor(event.status)}>
-            {event.status === 'planned' ? 'Planejado' :
-             event.status === 'active' ? 'Ativo' :
-             event.status === 'completed' ? 'Concluído' : 'Cancelado'}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge className={getEventStatusColor(event.status)}>
+              {event.status === 'planned' ? 'Planejado' :
+               event.status === 'active' ? 'Ativo' :
+               event.status === 'completed' ? 'Concluído' : 'Cancelado'}
+            </Badge>
+            {canEdit && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => onEdit(event)}
+                className="h-8 w-8 p-0"
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
         {event.boss_name && (
           <CardDescription className="flex items-center gap-1">
