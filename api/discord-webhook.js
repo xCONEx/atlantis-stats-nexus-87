@@ -1,24 +1,34 @@
 import { supabase } from '../src/integrations/supabase/client.js';
-import crypto from 'crypto';
+import nacl from 'tweetnacl';
 
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
 const PUBLIC_KEY = process.env.DISCORD_PUBLIC_KEY;
 
-// Verificar assinatura do Discord
-function verifySignature(req) {
-  const signature = req.headers['x-signature-ed25519'];
-  const timestamp = req.headers['x-signature-timestamp'];
-  const body = JSON.stringify(req.body);
+// Função para ler o corpo bruto da requisição
+async function getRawBody(req) {
+  return new Promise((resolve, reject) => {
+    let data = '';
+    req.on('data', chunk => {
+      data += chunk;
+    });
+    req.on('end', () => {
+      resolve(data);
+    });
+    req.on('error', err => {
+      reject(err);
+    });
+  });
+}
 
-  const message = timestamp + body;
-  const signatureBytes = Buffer.from(signature, 'hex');
-  const publicKeyBytes = Buffer.from(PUBLIC_KEY, 'hex');
-  const messageBytes = Buffer.from(message, 'utf8');
-
+// Verificar assinatura do Discord usando Ed25519
+function verifySignature({ rawBody, signature, timestamp, publicKey }) {
   try {
-    const verify = crypto.createVerify('RSA-SHA256');
-    verify.update(messageBytes);
-    return verify.verify(publicKeyBytes, signatureBytes);
+    const isValid = nacl.sign.detached.verify(
+      Buffer.from(timestamp + rawBody),
+      Buffer.from(signature, 'hex'),
+      Buffer.from(publicKey, 'hex')
+    );
+    return isValid;
   } catch (error) {
     console.error('Erro ao verificar assinatura:', error);
     return false;
@@ -30,12 +40,27 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Método não permitido' });
   }
 
-  // Verificar assinatura do Discord
-  if (!verifySignature(req)) {
+  // Lê o corpo bruto da requisição
+  const rawBody = await getRawBody(req);
+
+  // Recupera headers
+  const signature = req.headers['x-signature-ed25519'];
+  const timestamp = req.headers['x-signature-timestamp'];
+
+  // Verifica assinatura
+  if (!verifySignature({ rawBody, signature, timestamp, publicKey: PUBLIC_KEY })) {
     return res.status(401).json({ error: 'Assinatura inválida' });
   }
 
-  const { type, data } = req.body;
+  // Parseia o body após a verificação
+  let body;
+  try {
+    body = JSON.parse(rawBody);
+  } catch (e) {
+    return res.status(400).json({ error: 'Body inválido' });
+  }
+
+  const { type, data } = body;
 
   // Responder a ping do Discord
   if (type === 1) {
