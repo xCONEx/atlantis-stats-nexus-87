@@ -78,8 +78,9 @@ export default async function handler(req, res) {
     if (data?.custom_id?.startsWith('event_')) {
       try {
         // Log inicial dos dados recebidos
-        console.log('custom_id:', data.custom_id);
-        const [action, eventId, ...responseParts] = data.custom_id.split('_');
+        const custom_id = data.custom_id;
+        console.log('custom_id:', custom_id);
+        const [action, eventId, ...responseParts] = custom_id.split('_');
         const response = responseParts.join('_');
         console.log('action:', action, 'eventId:', eventId, 'response:', response);
         if (action !== 'event') {
