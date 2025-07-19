@@ -159,10 +159,12 @@
     height: auto;
   }
 
-  /* Prevenir overflow em modais */
-  [data-radix-dialog-content] {
-    max-width: 95vw !important;
-    width: 95vw !important;
+  /* Prevenir overflow em modais apenas em telas pequenas */
+  @media (max-width: 1024px) {
+    [data-radix-dialog-content] {
+      max-width: 95vw !important;
+      width: 95vw !important;
+    }
   }
 
   /* Garantir responsividade em telas pequenas */
@@ -273,7 +275,7 @@
 
   /* Responsividade para modais */
   .modal-responsive {
-    @apply max-w-[95vw] w-[95vw] sm:max-w-lg md:max-w-xl lg:max-w-2xl xl:max-w-4xl;
+    @apply w-full max-w-[95vw] sm:max-w-lg md:max-w-xl lg:max-w-3xl xl:max-w-5xl;
   }
 
   /* Responsividade para tabelas */
