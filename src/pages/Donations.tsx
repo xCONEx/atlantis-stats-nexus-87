@@ -497,7 +497,7 @@ const Donations = () => {
                               <span className={`font-bold text-lg ${gp.color}`}>{gp.display} GP</span>
                             </div>
                             <div className="mt-2 text-xs text-muted-foreground">Jogador não cadastrado no sistema</div>
-                            {userRole === 'admin' && (
+                            {userRole && userRole !== 'member' && (
                               <div className="flex gap-2 mt-3">
                                 <Button
                                   variant="outline"
