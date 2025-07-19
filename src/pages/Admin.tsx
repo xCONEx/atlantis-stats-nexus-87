@@ -137,14 +137,20 @@ const AdminPage = () => {
 
   const handleSaveRole = async (userId: string, oldRole: string, newRole: string) => {
     setLoading(true);
+    console.log('Tentando atualizar cargo:', { userId, oldRole, newRole });
+    
     // Atualiza role
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('user_roles')
       .update({ role: newRole })
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .select();
+    
+    console.log('Resultado da atualização:', { data, error });
+    
     if (!error) {
       // Log de auditoria
-      await supabase.from('activity_logs').insert({
+      const { error: logError } = await supabase.from('activity_logs').insert({
         activity_type: 'admin_role_change',
         description: `Cargo alterado de ${oldRole} para ${newRole}`,
         player_id: null,
@@ -155,9 +161,15 @@ const AdminPage = () => {
           to: newRole,
         },
       });
+      
+      if (logError) {
+        console.error('Erro ao criar log de auditoria:', logError);
+      }
+      
       toast({ title: 'Cargo atualizado', description: `Novo cargo: ${roleLabels[newRole] || newRole}` });
       fetchUsers();
     } else {
+      console.error('Erro ao atualizar cargo:', error);
       toast({ title: 'Erro', description: 'Falha ao atualizar cargo', variant: 'destructive' });
     }
     setEditingRole(null);
