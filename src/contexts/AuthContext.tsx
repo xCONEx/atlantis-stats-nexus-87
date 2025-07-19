@@ -207,7 +207,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           display_name: displayName,
           email,
           discord_id: discordId,
-        }, { onConflict: 'user_id,clan_name' });
+        }, { onConflict: ['user_id', 'clan_name'] });
       }
     } else {
       // Se não existir, cria pelo menos um registro com clan_name null
@@ -217,7 +217,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         display_name: displayName,
         email,
         discord_id: discordId,
-      }, { onConflict: 'user_id,clan_name' });
+      }, { onConflict: ['user_id', 'clan_name'] });
     }
   };
 
