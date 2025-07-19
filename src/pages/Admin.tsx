@@ -5,7 +5,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import { Zap, Shield, User, Crown, Users, Settings, UserCheck } from 'lucide-react';
+import { Zap, Shield, User, Crown, Users, Settings, UserCheck, Eye, EyeOff, Lock, Mail } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 
 const ADMIN_ROLES = ['admin', 'leader'];
 
@@ -38,6 +40,7 @@ const AdminPage = () => {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [users, setUsers] = useState<any[]>([]);
   const [search, setSearch] = useState('');
@@ -51,15 +54,22 @@ const AdminPage = () => {
     e.preventDefault();
     setLoginError(null);
     setLoading(true);
+    console.log('Tentando login com:', { email, password: '***' });
+    
     try {
       const { error } = await signIn(email, password);
+      console.log('Resultado do login:', { error });
+      
       if (error) {
+        console.error('Erro no login:', error);
         setLoginError(error.message || 'Erro ao fazer login');
       } else {
+        console.log('Login bem-sucedido, redirecionando...');
         // Login bem-sucedido - redirecionar para /admin
         window.location.href = '/admin';
       }
     } catch (err: any) {
+      console.error('Erro inesperado no login:', err);
       setLoginError('Erro ao fazer login');
     } finally {
       setLoading(false);
@@ -214,24 +224,143 @@ const AdminPage = () => {
     }
   };
 
-  // Proteção de rota
-  if (!user || !ADMIN_ROLES.includes(userRole || '')) {
+  // Proteção de rota - se não está logado, mostrar formulário de login
+  if (!user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#181c24] to-[#23283a] flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-card rounded-xl shadow-2xl border border-runescape-gold/30 p-8">
           <div className="text-center mb-8">
             <div className="w-16 h-16 bg-runescape-gold/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-runescape-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+              <Crown className="w-8 h-8 text-runescape-gold" />
             </div>
             <h1 className="text-3xl font-bold text-runescape-gold mb-2">Painel Administrativo</h1>
             <p className="text-muted-foreground">Acesso restrito para administradores e líderes</p>
           </div>
+          
+          <Card className="clan-card">
+            <CardHeader className="text-center">
+              <CardTitle className="text-runescape-gold">Login Administrativo</CardTitle>
+              <CardDescription>
+                Faça login com suas credenciais de administrador
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleEmailLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-runescape-gold">Email</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="seu@email.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="pl-10"
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-runescape-gold">Senha</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Sua senha"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="pl-10 pr-10"
+                      required
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
+                {loginError && (
+                  <div className="text-sm text-red-500 bg-red-500/10 p-3 rounded-md">
+                    {loginError}
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={loading}
+                >
+                  {loading ? 'Entrando...' : 'Entrar como Administrador'}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
           <div className="mt-8 pt-6 border-t border-runescape-gold/10">
             <p className="text-xs text-muted-foreground text-center">
               Este painel é exclusivo para administração do clã Atlantis.<br/>
               Todas as ações são registradas em log de auditoria.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Se está logado mas não tem permissão de admin
+  if (!ADMIN_ROLES.includes(userRole || '')) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#181c24] to-[#23283a] flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-card rounded-xl shadow-2xl border border-runescape-gold/30 p-8">
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Shield className="w-8 h-8 text-red-500" />
+            </div>
+            <h1 className="text-3xl font-bold text-red-500 mb-2">Acesso Negado</h1>
+            <p className="text-muted-foreground">Você não tem permissão para acessar este painel</p>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground mb-4">
+                Seu cargo atual: <span className="font-semibold text-runescape-gold">{roleLabels[userRole || ''] || userRole || 'N/A'}</span>
+              </p>
+            </div>
+            
+            <div className="flex gap-3">
+              <Button 
+                variant="outline" 
+                className="flex-1"
+                onClick={() => window.location.href = '/dashboard'}
+              >
+                Voltar ao Dashboard
+              </Button>
+              <Button 
+                variant="outline" 
+                className="flex-1"
+                onClick={signOut}
+              >
+                Sair
+              </Button>
+            </div>
+          </div>
+
+          <div className="mt-8 pt-6 border-t border-runescape-gold/10">
+            <p className="text-xs text-muted-foreground text-center">
+              Este painel é exclusivo para administração do clã Atlantis.<br/>
+              Entre em contato com um administrador se precisar de acesso.
             </p>
           </div>
         </div>
