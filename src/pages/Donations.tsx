@@ -73,6 +73,8 @@ const Donations = () => {
   const [selectedGhostPlayer, setSelectedGhostPlayer] = useState<string>("");
   const [editingGhost, setEditingGhost] = useState(false);
   const [availablePlayers, setAvailablePlayers] = useState<any[]>([]);
+  // Adicionar estado para armazenar o nome do fantasma selecionado
+  const [selectedGhostPlayerName, setSelectedGhostPlayerName] = useState<string>("");
 
   useEffect(() => {
     const fetchPlayerDonations = async () => {
@@ -385,32 +387,24 @@ const Donations = () => {
     if (!selectedGhostPlayer) return;
     setEditingGhost(true);
     try {
-      // Buscar todas as doações do jogador fantasma
-      const { data: donations } = await supabase
+      // Atualizar todas as doações do jogador fantasma para o player_id selecionado
+      const { error, count } = await supabase
         .from('donations')
-        .select('id')
-        .eq('player_name', selectedGhostPlayer)
+        .update({ 
+          player_id: selectedGhostPlayer,
+          player_name: null // Limpar o nome fantasma
+        })
+        .eq('player_name', selectedGhostPlayerName)
         .is('player_id', null);
-      
-      if (donations && donations.length > 0) {
-        // Atualizar todas as doações para o jogador selecionado
-        const { error } = await supabase
-          .from('donations')
-          .update({ 
-            player_id: selectedGhostPlayer,
-            player_name: null // Limpar o nome fantasma
-          })
-          .eq('player_name', selectedGhostPlayer)
-          .is('player_id', null);
-        
-        if (error) {
-          toast({ title: 'Erro ao editar', description: error.message, variant: 'destructive' });
-        } else {
-          toast({ title: 'Jogador editado', description: 'Doações linkadas com sucesso!', variant: 'default' });
-          setShowEditGhostModal(false);
-          setSelectedGhostPlayer("");
-          fetchPlayerDonations(); // Recarregar dados
-        }
+      if (error) {
+        toast({ title: 'Erro ao editar', description: error.message, variant: 'destructive' });
+      } else {
+        toast({ title: 'Doações linkadas!', description: 'Doações do jogador fantasma foram vinculadas ao jogador correto.', variant: 'default' });
+        setShowEditGhostModal(false);
+        setSelectedGhostPlayer("");
+        setSelectedGhostPlayerName("");
+        // Forçar recarregamento da lista
+        fetchPlayerDonations();
       }
     } catch (err: any) {
       toast({ title: 'Erro ao editar', description: err.message || 'Erro desconhecido', variant: 'destructive' });
@@ -511,7 +505,8 @@ const Donations = () => {
                                   className="flex-1"
                                   onClick={async () => {
                                     await loadAvailablePlayers();
-                                    setSelectedGhostPlayer(player.player_name || "");
+                                    setSelectedGhostPlayer("");
+                                    setSelectedGhostPlayerName(player.player_name || "");
                                     setShowEditGhostModal(true);
                                   }}
                                 >
