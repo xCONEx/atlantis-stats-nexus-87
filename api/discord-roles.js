@@ -4,18 +4,18 @@ import axios from 'axios';
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
 
 const ROLE_IDS = {
-  Generoso: "1395811213144887317",
-  Milionario: "1395811376605167847",
-  'Bilionário': "1395811441982050509",
-  Filantropo: "1395811476928856144",
+  Generoso: "1393970010694877357",
+  Milionario: "1393970765946290266",
+  'Bilionário': "1393970322428006431",
+  Filantropo: "1393970557367881829",
 };
-const GUILD_ID = "664599420528099338";
+const GUILD_ID = "321012107942428673";
 
 const DONATION_ROLE_IDS = [
-  "1395811213144887317", // Generoso
-  "1395811376605167847", // Milionario
-  "1395811441982050509", // Bilionário
-  "1395811476928856144", // Filantropo
+  "1393970010694877357", // Generoso
+  "1393970765946290266", // Milionario
+  "1393970322428006431", // Bilionário
+  "1393970557367881829", // Filantropo
 ];
 
 function getRoleIdByDonation(total) {
