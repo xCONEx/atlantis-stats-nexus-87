@@ -150,6 +150,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     toast({ title: 'Conta do Discord vinculada com sucesso!', description: 'Sua conta do Discord foi vinculada ao sistema.', variant: 'default' });
   };
 
+  // Função para criar/atualizar user_profile
+  const ensureUserProfile = async () => {
+    const currentUser = user;
+    if (!currentUser) return;
+    
+    const displayName = currentUser.user_metadata?.full_name || 
+                       currentUser.user_metadata?.name || 
+                       currentUser.email || 
+                       'Usuário';
+    
+    const { error } = await supabase.from('user_profiles').upsert({
+      user_id: currentUser.id,
+      email: currentUser.email || '',
+      display_name: displayName
+    }, { onConflict: 'user_id' });
+    
+    if (error) {
+      console.error('Erro ao criar/atualizar user_profile:', error);
+    }
+  };
+
   // Função para buscar o username do RuneScape
   const fetchRsUsername = async (discordId: string) => {
     const { data, error } = await supabase
@@ -164,6 +185,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Função para atualizar dados em user_roles após login/autenticação
+  const upsertUserRolesInfo = async (userObj: User) => {
+    if (!userObj) return;
+    const displayName = userObj.user_metadata?.full_name || userObj.user_metadata?.name || userObj.email || '';
+    const email = userObj.email || '';
+    const discordIdentity = Array.isArray(userObj.identities)
+      ? userObj.identities.find(i => i.provider === 'discord')
+      : null;
+    const discordId = discordIdentity?.id || null;
+    // Atualiza todos os registros do usuário em user_roles (pode ser mais de um clã)
+    const { data: roles } = await supabase
+      .from('user_roles')
+      .select('user_id, clan_name')
+      .eq('user_id', userObj.id);
+    if (roles && roles.length > 0) {
+      for (const role of roles) {
+        await supabase.from('user_roles').upsert({
+          user_id: userObj.id,
+          clan_name: role.clan_name,
+          display_name: displayName,
+          email,
+          discord_id: discordId,
+        }, { onConflict: 'user_id,clan_name' });
+      }
+    } else {
+      // Se não existir, cria pelo menos um registro com clan_name null
+      await supabase.from('user_roles').upsert({
+        user_id: userObj.id,
+        clan_name: null,
+        display_name: displayName,
+        email,
+        discord_id: discordId,
+      }, { onConflict: 'user_id,clan_name' });
+    }
+  };
+
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -174,11 +231,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setTimeout(() => {
             fetchUserRole(session.user.id);
             ensureDiscordLink(); // Garante o vínculo inicial
+            ensureUserProfile(); // Garante o perfil do usuário
             const realDiscordId = Array.isArray(session.user.identities)
               ? session.user.identities.find(i => i.provider === 'discord')?.id
               : null;
             if (realDiscordId) fetchRsUsername(realDiscordId);
           }, 0);
+          // Atualiza dados em user_roles
+          upsertUserRolesInfo(session.user);
           setShowLinkModal(false);
         } else {
           setUserRole(null);
@@ -195,10 +255,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session?.user) {
         await fetchUserRole(session.user.id);
         ensureDiscordLink(); // Garante o vínculo inicial
+        ensureUserProfile(); // Garante o perfil do usuário
         const realDiscordId = Array.isArray(session.user.identities)
           ? session.user.identities.find(i => i.provider === 'discord')?.id
           : null;
         if (realDiscordId) fetchRsUsername(realDiscordId);
+        // Atualiza dados em user_roles
+        upsertUserRolesInfo(session.user);
         setShowLinkModal(false);
       } else {
         setRsUsername(null);
@@ -286,6 +349,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Apenas loga, não bloqueia o login
           console.error('Erro ao garantir user_roles:', e);
         }
+        // Atualiza dados em user_roles
+        await upsertUserRolesInfo(data.user);
         // Remover redirecionamento automático - cada página gerencia seu próprio redirecionamento
         // window.location.href = '/dashboard';
       }
