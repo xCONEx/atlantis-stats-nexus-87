@@ -44,6 +44,7 @@ const AdminPage = () => {
   const [editingRole, setEditingRole] = useState<string | null>(null);
   const [roleDraft, setRoleDraft] = useState<string>('');
   const [fetching, setFetching] = useState(false);
+  const [updatingDiscordRoles, setUpdatingDiscordRoles] = useState(false);
 
   // Login por e-mail restrito
   const handleEmailLogin = async (e: React.FormEvent) => {
@@ -176,6 +177,43 @@ const AdminPage = () => {
     setLoading(false);
   };
 
+  // Função para atualizar todos os cargos do Discord
+  const handleUpdateAllDiscordRoles = async () => {
+    setUpdatingDiscordRoles(true);
+    try {
+      const response = await fetch('/api/update-all-discord-roles', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        toast({ 
+          title: 'Cargos atualizados!', 
+          description: `${result.success_count} jogadores atualizados com sucesso. ${result.error_count} erros.`, 
+          variant: 'default' 
+        });
+      } else {
+        toast({ 
+          title: 'Erro ao atualizar cargos', 
+          description: result.error || 'Erro desconhecido', 
+          variant: 'destructive' 
+        });
+      }
+    } catch (err: any) {
+      toast({ 
+        title: 'Erro ao atualizar cargos', 
+        description: err.message || 'Erro de conexão', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setUpdatingDiscordRoles(false);
+    }
+  };
+
   // Proteção de rota
   if (!user || !ADMIN_ROLES.includes(userRole || '')) {
     return (
@@ -206,6 +244,13 @@ const AdminPage = () => {
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold text-runescape-gold">Painel de Administração do Sistema</h1>
         <div className="flex gap-3">
+          <Button 
+            variant="runescape" 
+            onClick={handleUpdateAllDiscordRoles} 
+            disabled={updatingDiscordRoles}
+          >
+            {updatingDiscordRoles ? 'Atualizando...' : '🔄 Atualizar Cargos Discord'}
+          </Button>
           <Button variant="outline" onClick={() => window.location.href = '/dashboard'}>
             Dashboard
           </Button>
@@ -300,6 +345,7 @@ const AdminPage = () => {
       </div>
       <div className="mt-8 text-xs text-muted-foreground text-center">
         Todas as alterações de cargo são registradas em log de auditoria.<br/>
+        O botão "Atualizar Cargos Discord" sincroniza todos os cargos baseados em doações.<br/>
         Painel exclusivo para administração de usuários do sistema Atlantis.
       </div>
     </div>
