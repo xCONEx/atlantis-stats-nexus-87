@@ -76,6 +76,9 @@ const Donations = () => {
   // Adicionar estado para armazenar o nome do fantasma selecionado
   const [selectedGhostPlayerName, setSelectedGhostPlayerName] = useState<string>("");
 
+  // Policy para adicionar doação
+  const canAddDonation = userRole && userRole !== 'member';
+
   useEffect(() => {
     const fetchPlayerDonations = async () => {
       setLoading(true);
@@ -84,7 +87,7 @@ const Donations = () => {
         .select('player_id, player_name, amount')
         .order('player_name', { ascending: true });
       if (!error && data) {
-        // Agrupar no front (caso não tenha group by no supabase)
+        // Agrupar por player_id ou player_name e somar total_amount
         const grouped: Record<string, PlayerDonationSummary> = {};
         data.forEach((donation: any) => {
           const key = donation.player_id || donation.player_name;
@@ -430,7 +433,7 @@ const Donations = () => {
             {hasRolePermission(userRole, [
               'admin', 'administrator', 'leader', 'vice-leader', 'coordinator', 'fiscal', 'organizador'
             ]) && (
-              <Button onClick={() => setShowDonationModal(true)} className="btn-runescape">
+              <Button onClick={() => setShowDonationModal(true)} className="btn-runescape" disabled={!canAddDonation}>
                 <Plus className="h-4 w-4" />
                 Nova Doação
               </Button>
