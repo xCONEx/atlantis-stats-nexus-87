@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
+import { useMemo } from "react";
 
 interface PlayerDonationsModalProps {
   player_id: string;
@@ -56,6 +57,7 @@ const PlayerDonationsModal = ({ player_id, player_name, open, onClose }: PlayerD
   const [deleting, setDeleting] = useState(false);
   const { userRole } = useAuth();
   const { toast } = useToast();
+  const [userInfoMap, setUserInfoMap] = useState<Record<string, any>>({});
 
   useEffect(() => {
     if (!open || !player_id) return;
@@ -63,10 +65,20 @@ const PlayerDonationsModal = ({ player_id, player_name, open, onClose }: PlayerD
       setLoading(true);
       const { data, error } = await supabase
         .from('donations')
-        .select('id, amount, created_at, created_by')
+        .select('id, amount, created_at, created_by_email')
         .eq('player_id', player_id)
         .order('created_at', { ascending: false });
-      if (!error && data) setDonations(data);
+      if (!error && data) {
+        setDonations(data);
+        // Buscar infos de quem adicionou
+        const emails = Array.from(new Set(data.map((d: any) => d.created_by_email).filter(Boolean)));
+        // Não buscar discord_links, apenas montar o map com o e-mail
+        const infoMap: Record<string, { email: string }> = {};
+        emails.forEach(email => {
+          infoMap[email] = { email };
+        });
+        setUserInfoMap(infoMap);
+      }
       setLoading(false);
     };
     fetchDonations();
@@ -106,7 +118,17 @@ const PlayerDonationsModal = ({ player_id, player_name, open, onClose }: PlayerD
                     <span className="text-xs text-muted-foreground">{donation.created_at ? new Date(donation.created_at).toLocaleDateString('pt-BR') : ''}</span>
                   </CardHeader>
                   <CardContent className="p-3 pt-0 flex flex-row justify-between items-center">
-                    <span className="text-xs text-muted-foreground">Adicionado por: {donation.created_by || 'Desconhecido'}</span>
+                    <span className="text-xs text-muted-foreground">
+                      Adicionado por: {
+                        (() => {
+                          const email = donation.created_by_email;
+                          if (!email || typeof email !== 'string') return 'Desconhecido';
+                          const info = userInfoMap[email];
+                          if (info?.email) return info.email;
+                          return 'Desconhecido';
+                        })()
+                      }
+                    </span>
                     {userRole === 'admin' && (
                       <Button variant="destructive" size="sm" onClick={() => setDeleteId(donation.id)} disabled={deleting}>
                         Remover
