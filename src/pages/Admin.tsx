@@ -80,7 +80,7 @@ const AdminPage = () => {
   const fetchUsers = async () => {
     setFetching(true);
     try {
-      // Buscar user_roles com todos os campos relevantes
+      // Buscar user_roles com todos os campos relevantes (sem onConflict)
       let { data: userRoles, error: userRolesError } = await supabase
         .from('user_roles')
         .select('user_id, role, clan_name, display_name, email, discord_id')
@@ -91,7 +91,6 @@ const AdminPage = () => {
         setFetching(false);
         return;
       }
-      // Não precisa mais buscar user_profiles
       setUsers(userRoles);
     } catch (error) {
       console.error('Erro ao buscar usuários:', error);
