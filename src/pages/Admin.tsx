@@ -80,10 +80,10 @@ const AdminPage = () => {
   const fetchUsers = async () => {
     setFetching(true);
     try {
-      // Buscar user_roles
+      // Buscar user_roles com todos os campos relevantes
       let { data: userRoles, error: userRolesError } = await supabase
         .from('user_roles')
-        .select('user_id, role, clan_name')
+        .select('user_id, role, clan_name, display_name, email, discord_id')
         .order('role', { ascending: false });
       if (userRolesError) {
         console.error('Erro ao buscar user_roles:', userRolesError);
@@ -91,30 +91,8 @@ const AdminPage = () => {
         setFetching(false);
         return;
       }
-      // Buscar perfis dos usuários encontrados
-      const userIds = userRoles.map(u => u.user_id);
-      let profiles = [];
-      if (userIds.length > 0) {
-        const { data: profilesData, error: profilesError } = await supabase
-          .from('user_profiles')
-          .select('user_id, email, display_name')
-          .in('user_id', userIds);
-        if (profilesError) {
-          console.error('Erro ao buscar user_profiles:', profilesError);
-        } else {
-          profiles = profilesData;
-        }
-      }
-      // Merge dos dados
-      const usersWithDetails = userRoles.map((userRole) => {
-        const profile = profiles.find(p => p.user_id === userRole.user_id);
-        return {
-          ...userRole,
-          displayName: profile?.display_name || `Usuário ${userRole.user_id.slice(0, 8)}...`,
-          email: profile?.email || null
-        };
-      });
-      setUsers(usersWithDetails);
+      // Não precisa mais buscar user_profiles
+      setUsers(userRoles);
     } catch (error) {
       console.error('Erro ao buscar usuários:', error);
       setUsers([]);
@@ -133,10 +111,11 @@ const AdminPage = () => {
   const filteredUsers = users.filter(u => {
     const searchTerm = search.toLowerCase();
     return (
-      u.displayName.toLowerCase().includes(searchTerm) ||
-      (u.email && u.email.toLowerCase().includes(searchTerm)) ||
-      u.role.toLowerCase().includes(searchTerm) ||
-      (u.clan_name && u.clan_name.toLowerCase().includes(searchTerm))
+      (u.display_name?.toLowerCase().includes(searchTerm) || '') ||
+      (u.email?.toLowerCase().includes(searchTerm) || '') ||
+      (u.role?.toLowerCase().includes(searchTerm) || '') ||
+      (u.clan_name?.toLowerCase().includes(searchTerm) || '') ||
+      (u.discord_id?.toLowerCase().includes(searchTerm) || '')
     );
   });
 
@@ -405,7 +384,9 @@ const AdminPage = () => {
           <table className="min-w-full divide-y divide-runescape-gold/10">
             <thead className="bg-runescape-gold/10">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-runescape-gold">Nome do Usuário</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-runescape-gold">Nome de Exibição</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-runescape-gold">Email</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-runescape-gold">Discord ID</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-runescape-gold">Cargo no Sistema</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-runescape-gold">Clã</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-runescape-gold">Ações</th>
@@ -413,13 +394,12 @@ const AdminPage = () => {
             </thead>
             <tbody className="bg-card divide-y divide-runescape-gold/10">
               {filteredUsers.map((u) => (
-                <tr key={u.user_id} className="hover:bg-runescape-gold/5 transition">
+                <tr key={u.user_id + (u.clan_name || '')} className="hover:bg-runescape-gold/5 transition">
                   <td className="px-4 py-3">
-                    <div>
-                      <div className="font-medium text-runescape-gold">{u.displayName}</div>
-                      {u.email && <div className="text-xs text-muted-foreground">{u.email}</div>}
-                    </div>
+                    <div className="font-medium text-runescape-gold">{u.display_name || `Usuário ${u.user_id.slice(0, 8)}...`}</div>
                   </td>
+                  <td className="px-4 py-3 text-muted-foreground">{u.email || '-'}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{u.discord_id || '-'}</td>
                   <td className="px-4 py-3">
                     {editingRole === u.user_id ? (
                       <Select value={roleDraft} onValueChange={setRoleDraft}>
@@ -465,7 +445,7 @@ const AdminPage = () => {
               ))}
               {filteredUsers.length === 0 && !fetching && (
                 <tr>
-                  <td colSpan={4} className="text-center py-8 text-muted-foreground">Nenhum usuário encontrado.</td>
+                  <td colSpan={6} className="text-center py-8 text-muted-foreground">Nenhum usuário encontrado.</td>
                 </tr>
               )}
             </tbody>
