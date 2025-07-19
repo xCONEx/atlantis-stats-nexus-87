@@ -74,7 +74,7 @@ export default async function handler(req, res) {
   // Processar interação de botão
   if (type === 2 && data?.component_type === 2) {
     try {
-      const { custom_id, user_id, message_id } = data;
+      const { custom_id } = data;
       const [action, eventId, response] = custom_id.split('_');
 
       if (action !== 'event') {
@@ -87,8 +87,9 @@ export default async function handler(req, res) {
         });
       }
 
-      // Buscar Discord ID do usuário
-      const discordId = user_id;
+      // Buscar Discord ID do usuário corretamente
+      const discordId = body.member?.user?.id;
+      const messageId = body.message?.id;
       
       // Buscar player_id associado ao Discord ID
       const { data: link, error: linkError } = await supabase
