@@ -42,7 +42,6 @@ const PlayerDetailsModal = ({ player, open, onClose }: PlayerDetailsModalProps) 
   const [playerStats, setPlayerStats] = useState<PlayerStats | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Remover mockStats e usar API real
   useEffect(() => {
     if (open && player) {
       fetchPlayerStats();
@@ -100,22 +99,21 @@ const PlayerDetailsModal = ({ player, open, onClose }: PlayerDetailsModalProps) 
     return Object.keys(playerStats.skills).filter(skill => !combatSkills.includes(skill));
   };
 
-  // Remover o mapeamento antigo de SKILL_IMAGES e criar um novo baseado em imports dinâmicos locais
-
-  // Função utilitária para obter o caminho do ícone local (agora em /public/skills)
   const getSkillIcon = (skill: string) => {
     return `/skills/${skill}.png`;
   };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="modal-responsive max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center space-x-3 text-runescape-gold">
-            <Zap className="h-6 w-6" />
-            <span>{player.name}</span>
-            <div className="flex items-center space-x-2 text-sm bg-runescape-gold/20 px-3 py-1 rounded-full">
-              <Sword className="h-4 w-4" />
+          <DialogTitle className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 text-runescape-gold">
+            <div className="flex items-center space-x-2">
+              <Zap className="h-5 w-5 sm:h-6 sm:w-6" />
+              <span className="text-base sm:text-lg truncate">{player.name}</span>
+            </div>
+            <div className="flex items-center space-x-2 text-xs sm:text-sm bg-runescape-gold/20 px-2 sm:px-3 py-1 rounded-full">
+              <Sword className="h-3 w-3 sm:h-4 sm:w-4" />
               <span>Combat: {player.combat}</span>
             </div>
           </DialogTitle>
@@ -130,40 +128,40 @@ const PlayerDetailsModal = ({ player, open, onClose }: PlayerDetailsModalProps) 
           </div>
         ) : (
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-              <TabsTrigger value="skills">Habilidades</TabsTrigger>
-              <TabsTrigger value="bosses">Bosses</TabsTrigger>
-              <TabsTrigger value="minigames">Minigames</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
+              <TabsTrigger value="overview" className="text-xs sm:text-sm">Visão Geral</TabsTrigger>
+              <TabsTrigger value="skills" className="text-xs sm:text-sm">Habilidades</TabsTrigger>
+              <TabsTrigger value="bosses" className="text-xs sm:text-sm">Bosses</TabsTrigger>
+              <TabsTrigger value="minigames" className="text-xs sm:text-sm">Minigames</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="space-y-6">
               {/* Player Info */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
                 <Card className="clan-card">
-                  <CardContent className="p-6 text-center">
-                    <div className="text-3xl font-bold text-runescape-gold mb-2">
+                  <CardContent className="p-4 sm:p-6 text-center">
+                    <div className="text-2xl sm:text-3xl font-bold text-runescape-gold mb-2">
                       {player.totalLevel}
                     </div>
-                    <div className="text-sm text-muted-foreground">Nível Total</div>
+                    <div className="text-xs sm:text-sm text-muted-foreground">Nível Total</div>
                   </CardContent>
                 </Card>
                 
                 <Card className="clan-card">
-                  <CardContent className="p-6 text-center">
-                    <div className="text-3xl font-bold text-runescape-blue mb-2">
+                  <CardContent className="p-4 sm:p-6 text-center">
+                    <div className="text-2xl sm:text-3xl font-bold text-runescape-blue mb-2">
                       {formatXp(player.totalXp)}
                     </div>
-                    <div className="text-sm text-muted-foreground">XP Total</div>
+                    <div className="text-xs sm:text-sm text-muted-foreground">XP Total</div>
                   </CardContent>
                 </Card>
                 
                 <Card className="clan-card">
-                  <CardContent className="p-6 text-center">
-                    <div className="text-3xl font-bold text-green-400 mb-2">
+                  <CardContent className="p-4 sm:p-6 text-center">
+                    <div className="text-2xl sm:text-3xl font-bold text-green-400 mb-2">
                       {player.combat}
                     </div>
-                    <div className="text-sm text-muted-foreground">Nível de Combate</div>
+                    <div className="text-xs sm:text-sm text-muted-foreground">Nível de Combate</div>
                   </CardContent>
                 </Card>
               </div>
@@ -171,39 +169,39 @@ const PlayerDetailsModal = ({ player, open, onClose }: PlayerDetailsModalProps) 
               {/* Player Details */}
               <Card className="clan-card">
                 <CardHeader>
-                  <CardTitle className="text-runescape-gold">Informações do Jogador</CardTitle>
+                  <CardTitle className="text-runescape-gold text-base sm:text-lg">Informações do Jogador</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <div className="flex justify-between">
+                      <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Clã:</span>
-                        <span className="font-medium">{player.clan}</span>
+                        <span className="font-medium truncate">{player.clan}</span>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Cargo:</span>
-                        <span className="font-medium text-runescape-gold">{player.rank}</span>
+                        <span className="font-medium text-runescape-gold truncate">{player.rank}</span>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Membro desde:</span>
-                        <span className="font-medium">{new Date(player.joined).toLocaleDateString('pt-BR')}</span>
+                        <span className="font-medium text-xs">{new Date(player.joined).toLocaleDateString('pt-BR')}</span>
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <div className="flex justify-between">
+                      <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Status:</span>
                         <div className="flex items-center space-x-2">
                           <div className={`w-2 h-2 rounded-full ${
                             player.isOnline ? "bg-green-400" : "bg-gray-400"
                           }`} />
-                          <span className="font-medium">
+                          <span className="font-medium text-xs">
                             {player.isOnline ? "Online" : "Offline"}
                           </span>
                         </div>
                       </div>
-                      <div className="flex justify-between">
+                      <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Última vez visto:</span>
-                        <span className="font-medium">{player.lastSeen}</span>
+                        <span className="font-medium text-xs truncate">{player.lastSeen}</span>
                       </div>
                     </div>
                   </div>
@@ -213,7 +211,7 @@ const PlayerDetailsModal = ({ player, open, onClose }: PlayerDetailsModalProps) 
 
             <TabsContent value="skills" className="space-y-6">
               <div className="flex justify-end mb-2">
-                <Button variant="outline" size="sm" onClick={fetchPlayerStats} disabled={loading}>
+                <Button variant="outline" size="sm" onClick={fetchPlayerStats} disabled={loading} className="btn-responsive">
                   {loading ? "Atualizando..." : "Atualizar Skills"}
                 </Button>
               </div>
@@ -223,27 +221,27 @@ const PlayerDetailsModal = ({ player, open, onClose }: PlayerDetailsModalProps) 
                   <Card className="clan-card">
                     <CardHeader>
                       <CardTitle className="flex items-center space-x-2 text-runescape-gold">
-                        <Target className="h-5 w-5" />
-                        <span>Habilidades</span>
+                        <Target className="h-4 w-4 sm:h-5 sm:w-5" />
+                        <span className="text-base sm:text-lg">Habilidades</span>
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                         {Object.keys(playerStats.skills).map((skill) => {
                           const data = playerStats.skills[skill];
                           return (
-                            <div key={skill} className="medieval-border p-4 text-center flex flex-col items-center">
+                            <div key={skill} className="medieval-border p-3 sm:p-4 text-center flex flex-col items-center">
                               <div className="flex items-center justify-center mb-1">
                                 <img
                                   src={getSkillIcon(skill)}
                                   alt={skill}
-                                  className="w-7 h-7 mr-2"
+                                  className="w-5 h-5 sm:w-7 sm:h-7 mr-1 sm:mr-2"
                                   onError={e => (e.currentTarget.src = '/skills/default.png')}
                                 />
-                                <span className="font-medium text-runescape-gold">{skill}</span>
+                                <span className="font-medium text-runescape-gold text-xs sm:text-sm truncate">{skill}</span>
                               </div>
-                              <div className="text-2xl font-bold mb-1">{data ? data.level : '-'}</div>
-                              <div className="text-sm text-muted-foreground mb-1">
+                              <div className="text-xl sm:text-2xl font-bold mb-1">{data ? data.level : '-'}</div>
+                              <div className="text-xs text-muted-foreground mb-1">
                                 {data ? formatXp(data.xp) : '0'} XP
                               </div>
                               <div className="text-xs text-muted-foreground">
@@ -260,57 +258,37 @@ const PlayerDetailsModal = ({ player, open, onClose }: PlayerDetailsModalProps) 
             </TabsContent>
 
             <TabsContent value="bosses" className="space-y-6">
-              {playerStats && (
-                <Card className="clan-card">
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2 text-runescape-gold">
-                      <Shield className="h-5 w-5" />
-                      <span>Boss Kills</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                      {Object.entries(playerStats.bosses).map(([boss, data]) => (
-                        <div key={boss} className="medieval-border p-4 text-center">
-                          <div className="font-medium text-runescape-gold mb-1">{boss}</div>
-                          <div className="text-2xl font-bold mb-1">{formatNumber(data.kills)}</div>
-                          <div className="text-sm text-muted-foreground">Kills</div>
-                          <div className="text-xs text-muted-foreground">
-                            Rank: {formatNumber(data.rank)}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+              <Card className="clan-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2 text-runescape-gold">
+                    <Award className="h-4 w-4 sm:h-5 sm:w-5" />
+                    <span className="text-base sm:text-lg">Bosses</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center text-muted-foreground py-8">
+                    <Award className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>Estatísticas de bosses em desenvolvimento</p>
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             <TabsContent value="minigames" className="space-y-6">
-              {playerStats && (
-                <Card className="clan-card">
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2 text-runescape-gold">
-                      <Award className="h-5 w-5" />
-                      <span>Minigames</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {Object.entries(playerStats.minigames).map(([minigame, data]) => (
-                        <div key={minigame} className="medieval-border p-4 text-center">
-                          <div className="font-medium text-runescape-gold mb-1">{minigame}</div>
-                          <div className="text-2xl font-bold mb-1">{formatNumber(data.score)}</div>
-                          <div className="text-sm text-muted-foreground">Score</div>
-                          <div className="text-xs text-muted-foreground">
-                            Rank: {formatNumber(data.rank)}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+              <Card className="clan-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2 text-runescape-gold">
+                    <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
+                    <span className="text-base sm:text-lg">Minigames</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center text-muted-foreground py-8">
+                    <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>Estatísticas de minigames em desenvolvimento</p>
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
         )}
