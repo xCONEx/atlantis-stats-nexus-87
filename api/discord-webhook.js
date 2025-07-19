@@ -8,6 +8,7 @@ const PUBLIC_KEY = process.env.DISCORD_PUBLIC_KEY;
 async function getRawBody(req) {
   return new Promise((resolve, reject) => {
     let data = '';
+    req.setEncoding('utf8'); // Garante que o body será lido como string UTF-8
     req.on('data', chunk => {
       data += chunk;
     });
@@ -42,6 +43,7 @@ export default async function handler(req, res) {
 
   // Lê o corpo bruto da requisição
   const rawBody = await getRawBody(req);
+  console.log('rawBody recebido:', rawBody); // Log para depuração
 
   // Recupera headers
   const signature = req.headers['x-signature-ed25519'];
@@ -55,8 +57,10 @@ export default async function handler(req, res) {
   // Parseia o body após a verificação
   let body;
   try {
+    console.log('Tentando fazer parse do rawBody...');
     body = JSON.parse(rawBody);
   } catch (e) {
+    console.error('Erro ao fazer parse do rawBody:', e);
     return res.status(400).json({ error: 'Body inválido' });
   }
 
