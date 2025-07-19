@@ -84,7 +84,7 @@ export default function LinkDiscordModal({ open, onClose, discordId, onLinked }:
       email,
       discord_id: discordId,
       clan_name: player?.clan_name || null,
-    }, { onConflict: 'user_id,clan_name' });
+    }, { onConflict: ['user_id', 'clan_name'] });
     setLoading(false);
     toast({ title: 'Sucesso', description: 'Discord vinculado ao seu nick!', variant: 'default' });
     if (onLinked) onLinked(); // Chama callback se fornecido
