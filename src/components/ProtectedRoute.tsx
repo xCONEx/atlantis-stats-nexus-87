@@ -12,10 +12,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const location = useLocation();
 
   useEffect(() => {
-    if (!loading && !user) {
+    // Não redirecionar se estiver na página admin - ela gerencia seu próprio login
+    if (!loading && !user && location.pathname !== '/admin') {
       navigate('/login');
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, navigate, location.pathname]);
 
   // Se for admin e está acessando /admin, libera imediatamente
   if (userRole === 'admin' && location.pathname === '/admin') {
@@ -31,6 +32,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
         </div>
       </div>
     );
+  }
+
+  // Se não está logado e está na página admin, permite que a página admin gerencie
+  if (!user && location.pathname === '/admin') {
+    return <>{children}</>;
   }
 
   if (!user) {
