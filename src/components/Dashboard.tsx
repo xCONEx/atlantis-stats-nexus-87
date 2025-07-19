@@ -6,6 +6,7 @@ import RecentPlayers from "./RecentPlayers";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import he from "he";
+import { Link } from "react-router-dom";
 
 const Dashboard = () => {
   const [stats, setStats] = useState<any[]>([]);
@@ -195,10 +196,12 @@ const Dashboard = () => {
               </div>
               
               <div className="mt-4">
-                <Button variant="clan" className="w-full">
-                  <Crown className="h-4 w-4" />
-                  Gerenciar Eventos
-                </Button>
+                <Link to="/events">
+                  <Button variant="clan" className="w-full">
+                    <Crown className="h-4 w-4" />
+                    Gerenciar Eventos
+                  </Button>
+                </Link>
               </div>
             </CardContent>
           </Card>
