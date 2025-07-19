@@ -52,24 +52,39 @@ export default function LinkDiscordModal({ open, onClose, discordId, onLinked }:
       setLoading(false);
       return;
     }
-    // Garante que o discordId é numérico (id real do Discord)
-    if (!/^[0-9]{15,20}$/.test(discordId)) {
-      toast({ title: 'Erro', description: 'ID do Discord inválido. Faça login com Discord para vincular corretamente.', variant: 'destructive' });
+    // Busca player_id e clan_name
+    const { data: player } = await supabase
+      .from('players')
+      .select('id, clan_name')
+      .eq('username', nick)
+      .single();
+    // Busca usuário autenticado
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast({ title: 'Erro', description: 'Usuário não autenticado.', variant: 'destructive' });
       setLoading(false);
       return;
     }
-    // Busca player_id
-    const { data: player } = await supabase
-      .from('players')
-      .select('id')
-      .eq('username', nick)
-      .single();
-    // Salva associação
-    await supabase.from('discord_links').upsert({
-      discord_id: discordId,
+    // Busca dados do Discord
+    const displayName = user.user_metadata?.full_name || user.user_metadata?.name || user.email || '';
+    const email = user.email || '';
+    const discordIdentity = Array.isArray(user.identities)
+      ? user.identities.find(i => i.provider === 'discord')
+      : null;
+    const discordId = discordIdentity?.id || null;
+    // Atualiza associação existente pelo id do usuário Supabase
+    await supabase.from('discord_links').update({
       username: nick,
       player_id: player?.id || null,
-    }, { onConflict: 'discord_id,username' });
+    }).eq('id', user.id);
+    // Upsert em user_roles
+    await supabase.from('user_roles').upsert({
+      user_id: user.id,
+      display_name: displayName,
+      email,
+      discord_id: discordId,
+      clan_name: player?.clan_name || null,
+    }, { onConflict: 'user_id,clan_name' });
     setLoading(false);
     toast({ title: 'Sucesso', description: 'Discord vinculado ao seu nick!', variant: 'default' });
     if (onLinked) onLinked(); // Chama callback se fornecido
