@@ -15,6 +15,7 @@ import Clans from "./pages/Clans";
 import NotFound from "./pages/NotFound";
 import AdminPage from './pages/Admin';
 import RankingDonation from './pages/RankingDonation';
+import Events from './pages/Events';
 
 const queryClient = new QueryClient();
 
@@ -33,6 +34,7 @@ const App = () => (
             <Route path="/dashboard" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/players" element={<ProtectedRoute><Players /></ProtectedRoute>} />
             <Route path="/donations" element={<ProtectedRoute><Donations /></ProtectedRoute>} />
+            <Route path="/events" element={<ProtectedRoute><Events /></ProtectedRoute>} />
             <Route path="/clans" element={<ProtectedRoute><Clans /></ProtectedRoute>} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="*" element={<NotFound />} />
