@@ -77,10 +77,13 @@ export default async function handler(req, res) {
     // Se for um botão de evento, executa a lógica de registro
     if (data?.custom_id?.startsWith('event_')) {
       try {
-        // Corrigir split do custom_id para status com underscores
-        const [action, eventId, ...responseParts] = custom_id.split('_');
+        // Log inicial dos dados recebidos
+        console.log('custom_id:', data.custom_id);
+        const [action, eventId, ...responseParts] = data.custom_id.split('_');
         const response = responseParts.join('_');
+        console.log('action:', action, 'eventId:', eventId, 'response:', response);
         if (action !== 'event') {
+          console.log('Ação inválida:', action);
           return res.status(400).json({
             type: 4,
             data: {
@@ -91,13 +94,16 @@ export default async function handler(req, res) {
         }
         // Buscar Discord ID do usuário corretamente
         const discordId = member?.user?.id;
+        console.log('discordId:', discordId);
         // Buscar player_id associado ao Discord ID
         const { data: link, error: linkError } = await supabase
           .from('discord_links')
           .select('player_id, username')
           .eq('discord_id', discordId)
           .single();
+        console.log('link:', link, 'linkError:', linkError);
         if (linkError || !link) {
+          console.log('Usuário não vinculado ao RuneScape.');
           return res.status(200).json({
             type: 4,
             data: {
@@ -107,12 +113,13 @@ export default async function handler(req, res) {
           });
         }
         // Verificar se já existe participação
-        const { data: existingParticipation } = await supabase
+        const { data: existingParticipation, error: participationError } = await supabase
           .from('event_participants')
           .select('status')
           .eq('event_id', eventId)
           .eq('player_id', link.player_id)
           .single();
+        console.log('existingParticipation:', existingParticipation, 'participationError:', participationError);
         let newStatus;
         switch (response) {
           case 'interested':
@@ -130,22 +137,25 @@ export default async function handler(req, res) {
           default:
             newStatus = 'interested';
         }
+        console.log('newStatus:', newStatus);
         if (existingParticipation) {
           // Atualizar participação existente
-          await supabase
+          const { error: updateError } = await supabase
             .from('event_participants')
             .update({ status: newStatus })
             .eq('event_id', eventId)
             .eq('player_id', link.player_id);
+          console.log('updateError:', updateError);
         } else {
           // Criar nova participação
-          await supabase
+          const { error: insertError } = await supabase
             .from('event_participants')
             .insert({
               event_id: eventId,
               player_id: link.player_id,
               status: newStatus
             });
+          console.log('insertError:', insertError);
         }
         // Atualizar contador de participantes no evento
         await updateEventParticipantCount(eventId);
@@ -170,6 +180,7 @@ export default async function handler(req, res) {
           'maybe': '❓ Talvez participe do evento',
           'not_attending': '❌ Não vai participar do evento'
         };
+        console.log('Resposta final enviada:', statusMessages[newStatus] || 'Resposta registrada!');
         return res.status(200).json({
           type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
           data: {
