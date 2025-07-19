@@ -2,8 +2,8 @@ import { supabase } from '../src/integrations/supabase/client.js';
 import axios from 'axios';
 
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
-const GUILD_ID = "664599420528099338";
-const PVM_CHANNEL_ID = process.env.DISCORD_PVM_CHANNEL_ID || "664600078568128541"; // Substitua pelo ID do canal PvM
+const GUILD_ID = "321012107942428673";
+const PVM_CHANNEL_ID = process.env.DISCORD_PVM_CHANNEL_ID || "1131608362577051709"; // Substitua pelo ID do canal PvM
 
 // Emojis para reações
 const REACTION_EMOJIS = {
