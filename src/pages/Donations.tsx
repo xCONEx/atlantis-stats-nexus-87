@@ -372,7 +372,12 @@ const Donations = () => {
       .from('players')
       .select('id, username, display_name, is_active')
       .eq('is_active', true);
-    setAvailablePlayers(data || []);
+    const sorted = (data || []).sort((a, b) => {
+      const nameA = cleanPlayerName(a.display_name || a.username).toLowerCase();
+      const nameB = cleanPlayerName(b.display_name || b.username).toLowerCase();
+      return nameA.localeCompare(nameB, 'pt-BR');
+    });
+    setAvailablePlayers(sorted);
   };
 
   // Função para editar jogador fantasma
