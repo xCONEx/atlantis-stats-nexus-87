@@ -197,7 +197,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Atualiza todos os registros do usuário em user_roles (pode ser mais de um clã)
     const { data: roles } = await supabase
       .from('user_roles')
-      .select('user_id, clan_name, role')
+      .select('user_id, clan_name, role, id')
       .eq('user_id', userObj.id);
     if (roles && roles.length > 0) {
       for (const roleRow of roles) {
@@ -210,8 +210,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           discord_id: discordId,
           role: roleToSend
         };
-        console.log('[user_roles upsert] payload:', payload);
-        await supabase.from('user_roles').upsert(payload, { onConflict: ['user_id', 'clan_name'] });
+        if (roleRow.clan_name === null) {
+          // Trata o caso especial de clan_name null: select, se existe faz update, se não faz insert
+          const { data: existing, error: selectError } = await supabase
+            .from('user_roles')
+            .select('id')
+            .eq('user_id', userObj.id)
+            .is('clan_name', null)
+            .single();
+          if (existing && existing.id) {
+            console.log('[user_roles update] payload:', payload);
+            await supabase.from('user_roles').update(payload).eq('id', existing.id);
+          } else {
+            console.log('[user_roles insert] payload:', payload);
+            await supabase.from('user_roles').insert(payload);
+          }
+        } else {
+          // Para outros casos, mantém o upsert
+          console.log('[user_roles upsert] payload:', payload);
+          await supabase.from('user_roles').upsert(payload, { onConflict: ['user_id', 'clan_name'] });
+        }
       }
     } else {
       // Se não existir, cria pelo menos um registro com clan_name null e role 'member'
@@ -223,8 +241,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         discord_id: discordId,
         role: 'member'
       };
-      console.log('[user_roles upsert] payload (novo):', payload);
-      await supabase.from('user_roles').upsert(payload, { onConflict: ['user_id', 'clan_name'] });
+      // Trata o caso especial de clan_name null: select, se existe faz update, se não faz insert
+      const { data: existing, error: selectError } = await supabase
+        .from('user_roles')
+        .select('id')
+        .eq('user_id', userObj.id)
+        .is('clan_name', null)
+        .single();
+      if (existing && existing.id) {
+        console.log('[user_roles update] payload:', payload);
+        await supabase.from('user_roles').update(payload).eq('id', existing.id);
+      } else {
+        console.log('[user_roles insert] payload:', payload);
+        await supabase.from('user_roles').insert(payload);
+      }
     }
   };
 
