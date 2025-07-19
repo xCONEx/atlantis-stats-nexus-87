@@ -490,27 +490,7 @@ const Donations = () => {
                       return (
                         <Card key={player.player_name} className="shadow-md opacity-60">
                           <CardHeader>
-                            <div className="flex items-center justify-between">
-                              <CardTitle className="truncate">{cleanPlayerName(player.player_name)}</CardTitle>
-                              {userRole === 'admin' && (
-                                <div className="flex gap-2">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={async () => {
-                                      await loadAvailablePlayers();
-                                      setSelectedGhostPlayer(player.player_name || "");
-                                      setShowEditGhostModal(true);
-                                    }}
-                                  >
-                                    Editar
-                                  </Button>
-                                  <Button variant="destructive" size="sm" onClick={() => setDeleteGhost(player.player_name)} disabled={deletingGhost}>
-                                    Remover
-                                  </Button>
-                                </div>
-                              )}
-                            </div>
+                            <CardTitle className="truncate">{cleanPlayerName(player.player_name)}</CardTitle>
                             <CardDescription>Total doado</CardDescription>
                           </CardHeader>
                           <CardContent>
@@ -518,6 +498,31 @@ const Donations = () => {
                               <span className={`font-bold text-lg ${gp.color}`}>{gp.display} GP</span>
                             </div>
                             <div className="mt-2 text-xs text-muted-foreground">Jogador não cadastrado no sistema</div>
+                            {userRole === 'admin' && (
+                              <div className="flex gap-2 mt-3">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="flex-1"
+                                  onClick={async () => {
+                                    await loadAvailablePlayers();
+                                    setSelectedGhostPlayer(player.player_name || "");
+                                    setShowEditGhostModal(true);
+                                  }}
+                                >
+                                  Editar
+                                </Button>
+                                <Button 
+                                  variant="destructive" 
+                                  size="sm" 
+                                  className="flex-1"
+                                  onClick={() => setDeleteGhost(player.player_name)} 
+                                  disabled={deletingGhost}
+                                >
+                                  Remover
+                                </Button>
+                              </div>
+                            )}
                           </CardContent>
                         </Card>
                       );
