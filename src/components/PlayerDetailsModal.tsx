@@ -105,7 +105,7 @@ const PlayerDetailsModal = ({ player, open, onClose }: PlayerDetailsModalProps) 
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="modal-responsive max-h-[90vh] overflow-y-auto">
+      <DialogContent className="modal-responsive max-w-5xl w-full max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 text-runescape-gold">
             <div className="flex items-center space-x-2">
