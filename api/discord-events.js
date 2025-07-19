@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
 const GUILD_ID = "664599420528099338";
-const PVM_CHANNEL_ID = process.env.DISCORD_PVM_CHANNEL_ID || "664600078568128541"; // Substitua pelo ID do canal PvM
+const PVM_CHANNEL_ID = process.env.DISCORD_PVM_CHANNEL_ID || "1234567890123456789"; // Substitua pelo ID do canal PvM
 
 // Emojis para reações
 const REACTION_EMOJIS = {
@@ -53,7 +53,7 @@ async function sendDiscordMessage(event) {
   }
 
   const messageData = {
-    content: `@everyone **Novo evento criado!** 🎉`,
+    content: `@Membro **Novo evento criado!** 🎉`,
     embeds: [embed],
     components: [
       {
