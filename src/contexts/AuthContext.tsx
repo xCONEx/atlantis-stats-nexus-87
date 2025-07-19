@@ -197,27 +197,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Atualiza todos os registros do usuário em user_roles (pode ser mais de um clã)
     const { data: roles } = await supabase
       .from('user_roles')
-      .select('user_id, clan_name')
+      .select('user_id, clan_name, role')
       .eq('user_id', userObj.id);
     if (roles && roles.length > 0) {
-      for (const role of roles) {
-        await supabase.from('user_roles').upsert({
+      for (const roleRow of roles) {
+        const roleToSend = roleRow.role || 'member';
+        const payload = {
           user_id: userObj.id,
-          clan_name: role.clan_name,
+          clan_name: roleRow.clan_name,
           display_name: displayName,
           email,
           discord_id: discordId,
-        }, { onConflict: ['user_id', 'clan_name'] });
+          role: roleToSend
+        };
+        console.log('[user_roles upsert] payload:', payload);
+        await supabase.from('user_roles').upsert(payload, { onConflict: ['user_id', 'clan_name'] });
       }
     } else {
-      // Se não existir, cria pelo menos um registro com clan_name null
-      await supabase.from('user_roles').upsert({
+      // Se não existir, cria pelo menos um registro com clan_name null e role 'member'
+      const payload = {
         user_id: userObj.id,
         clan_name: null,
         display_name: displayName,
         email,
         discord_id: discordId,
-      }, { onConflict: ['user_id', 'clan_name'] });
+        role: 'member'
+      };
+      console.log('[user_roles upsert] payload (novo):', payload);
+      await supabase.from('user_roles').upsert(payload, { onConflict: ['user_id', 'clan_name'] });
     }
   };
 
