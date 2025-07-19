@@ -69,48 +69,40 @@ const AdminPage = () => {
   const fetchUsers = async () => {
     setFetching(true);
     try {
-      // Buscar apenas user_roles por enquanto
+      // Buscar user_roles
       let { data: userRoles, error: userRolesError } = await supabase
         .from('user_roles')
         .select('user_id, role, clan_name')
         .order('role', { ascending: false });
-      
       if (userRolesError) {
         console.error('Erro ao buscar user_roles:', userRolesError);
         setUsers([]);
         setFetching(false);
         return;
       }
-
-      console.log('User roles encontrados:', userRoles.length);
-
-      // Processar dados dos usuários
-      const usersWithDetails = userRoles.map((userRole) => {
-        // Se for o usuário atual, usar dados do contexto
-        const isCurrentUser = user && user.id === userRole.user_id;
-        
-        if (isCurrentUser) {
-          const displayName = user.user_metadata?.full_name || 
-                             user.user_metadata?.name || 
-                             user.email || 
-                             'Usuário Atual';
-          return {
-            ...userRole,
-            displayName,
-            email: user.email
-          };
+      // Buscar perfis dos usuários encontrados
+      const userIds = userRoles.map(u => u.user_id);
+      let profiles = [];
+      if (userIds.length > 0) {
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('user_profiles')
+          .select('user_id, email, display_name')
+          .in('user_id', userIds);
+        if (profilesError) {
+          console.error('Erro ao buscar user_profiles:', profilesError);
+        } else {
+          profiles = profilesData;
         }
-        
-        // Para outros usuários, usar ID truncado
-        const displayName = `Usuário ${userRole.user_id.slice(0, 8)}...`;
-        
+      }
+      // Merge dos dados
+      const usersWithDetails = userRoles.map((userRole) => {
+        const profile = profiles.find(p => p.user_id === userRole.user_id);
         return {
           ...userRole,
-          displayName,
-          email: null
+          displayName: profile?.display_name || `Usuário ${userRole.user_id.slice(0, 8)}...`,
+          email: profile?.email || null
         };
       });
-
       setUsers(usersWithDetails);
     } catch (error) {
       console.error('Erro ao buscar usuários:', error);
@@ -173,7 +165,7 @@ const AdminPage = () => {
   };
 
   // Proteção de rota
-  if (!user) {
+  if (!user || !ADMIN_ROLES.includes(userRole || '')) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#181c24] to-[#23283a] flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-card rounded-xl shadow-2xl border border-runescape-gold/30 p-8">
@@ -186,54 +178,6 @@ const AdminPage = () => {
             <h1 className="text-3xl font-bold text-runescape-gold mb-2">Painel Administrativo</h1>
             <p className="text-muted-foreground">Acesso restrito para administradores e líderes</p>
           </div>
-          
-          <form onSubmit={handleEmailLogin} className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-runescape-gold">E-mail</label>
-              <Input 
-                type="email" 
-                value={email} 
-                onChange={e => setEmail(e.target.value)} 
-                placeholder="seu@email.com"
-                className="bg-background border-runescape-gold/20 focus:border-runescape-gold"
-                required 
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-runescape-gold">Senha</label>
-              <Input 
-                type="password" 
-                value={password} 
-                onChange={e => setPassword(e.target.value)} 
-                placeholder="••••••••"
-                className="bg-background border-runescape-gold/20 focus:border-runescape-gold"
-                required 
-              />
-            </div>
-            
-            {loginError && (
-              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-                <p className="text-red-400 text-sm">{loginError}</p>
-              </div>
-            )}
-            
-            <Button 
-              type="submit" 
-              className="w-full bg-runescape-gold hover:bg-runescape-gold/90 text-black font-semibold" 
-              disabled={loading}
-            >
-              {loading ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin"></div>
-                  Entrando...
-                </div>
-              ) : (
-                'Acessar Painel'
-              )}
-            </Button>
-          </form>
-          
           <div className="mt-8 pt-6 border-t border-runescape-gold/10">
             <p className="text-xs text-muted-foreground text-center">
               Este painel é exclusivo para administração do clã Atlantis.<br/>
@@ -243,10 +187,6 @@ const AdminPage = () => {
         </div>
       </div>
     );
-  }
-
-  if (!ADMIN_ROLES.includes(userRole || '')) {
-    return <div className="p-8 text-center text-red-500 font-bold">Acesso restrito. Apenas administradores ou líderes.</div>;
   }
 
   return (
