@@ -77,8 +77,9 @@ export default async function handler(req, res) {
     // Se for um botão de evento, executa a lógica de registro
     if (data?.custom_id?.startsWith('event_')) {
       try {
-        const { custom_id } = data;
-        const [action, eventId, response] = custom_id.split('_');
+        // Corrigir split do custom_id para status com underscores
+        const [action, eventId, ...responseParts] = custom_id.split('_');
+        const response = responseParts.join('_');
         if (action !== 'event') {
           return res.status(400).json({
             type: 4,
@@ -148,8 +149,8 @@ export default async function handler(req, res) {
         }
         // Atualizar contador de participantes no evento
         await updateEventParticipantCount(eventId);
-        // Log da interação
-        await supabase.from('activity_logs').insert({
+        // Log da interação com tratamento de erro
+        const { error: logError } = await supabase.from('activity_logs').insert({
           activity_type: 'event_interaction',
           description: `Usuário ${link.username} respondeu ao evento ${eventId}: ${newStatus}`,
           metadata: {
@@ -160,6 +161,9 @@ export default async function handler(req, res) {
           },
           player_id: link.player_id
         });
+        if (logError) {
+          console.error('Erro ao inserir log no Supabase:', logError);
+        }
         const statusMessages = {
           'interested': '👍 Interessado no evento!',
           'registered': '✅ Confirmado para o evento!',
